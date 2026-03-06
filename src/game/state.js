@@ -3,12 +3,14 @@ import { REALM_CONFIG, MAP_CONFIG, REINCARNATION_CONFIG } from './config.js'
 import { formatNumber } from './utils.js'
 import { calculateTotalEquipAttr } from './equipment.js'
 
-// 初始游戏状态
 const initState = () => ({
   playerName: '修仙者',
   currentRealmId: 1,
   currentLevel: 1,
   currentExp: 0,
+  level: 1,
+  levelExp: 0,
+  levelMaxExp: 100,
   totalKillCount: 0,
   realmKillCount: 0,
   baseAttribute: {
@@ -20,7 +22,7 @@ const initState = () => ({
   },
   freeAttributePoint: 0,
   reincarnationCount: 0,
-  gold: 0,
+  gold: 1000,
   items: {
     strengthenStone: 0,
     upgradeStone: 0,
@@ -48,6 +50,8 @@ const initState = () => ({
   shopItems: [],
   lastSaveTime: Date.now(),
   age: 16,
+  isContinuousAttacking: false,
+  continuousAttackTimerId: null
 })
 
 export const gameState = reactive(initState())
@@ -73,14 +77,12 @@ export const currentRealmExpNeed = computed(() => {
 export const currentRealmKillNeed = computed(() => {
   const realm = currentRealm.value
   const currentLevel = gameState.currentLevel
-
   let multiplier = 1.8
   if (realm.id >= 3 && realm.id <= 4) multiplier = 1.6
   if (realm.id >= 5 && realm.id <= 6) multiplier = 1.4
   if (realm.id >= 7 && realm.id <= 8) multiplier = 1.3
   if (realm.id >= 9 && realm.id <= 11) multiplier = 1.2
   if (realm.id >= 12) multiplier = 1.15
-
   const needCount = Math.floor(realm.baseKillNeed * Math.pow(multiplier, currentLevel - 1))
   return Math.min(needCount, 100000)
 })
@@ -97,23 +99,24 @@ export const killProgress = computed(() => {
   return Math.min((gameState.realmKillCount / currentRealmKillNeed.value) * 100, 100)
 })
 
+export const levelExpProgress = computed(() => {
+  return Math.min((gameState.levelExp / gameState.levelMaxExp) * 100, 100)
+})
+
 export const playerTotalAttribute = computed(() => {
   const { baseAttribute, reincarnationCount } = gameState
   const { baseBonus } = REINCARNATION_CONFIG
   const equipAttr = calculateTotalEquipAttr()
-
   const reincarnationMultiplier = 1 + reincarnationCount * baseBonus.expRate
   const attackMultiplier = 1 + reincarnationCount * baseBonus.attack
   const hpMultiplier = 1 + reincarnationCount * baseBonus.hp
   const defenseMultiplier = 1 + reincarnationCount * baseBonus.defense
   const dropMultiplier = 1 + reincarnationCount * baseBonus.dropRate
-
   const totalPower = baseAttribute.power + equipAttr.power
   const totalConstitution = baseAttribute.constitution + equipAttr.constitution
   const totalAgility = baseAttribute.agility + equipAttr.agility
   const totalComprehension = baseAttribute.comprehension + equipAttr.comprehension
   const totalLuck = baseAttribute.luck + equipAttr.luck
-
   const baseAttack = totalPower * 2 + equipAttr.attack
   const baseHp = totalConstitution * 20 + equipAttr.hp
   const baseDefense = totalConstitution * 1 + equipAttr.defense
@@ -122,7 +125,6 @@ export const playerTotalAttribute = computed(() => {
   const baseExpRate = 1 + totalComprehension * 0.005
   const baseDropRate = totalLuck * 0.002
   const baseCritDamage = 1.3 + totalLuck * 0.003
-
   return {
     attack: baseAttack * attackMultiplier,
     hp: baseHp * hpMultiplier,
@@ -134,6 +136,26 @@ export const playerTotalAttribute = computed(() => {
     critDamage: baseCritDamage,
   }
 })
+
+export const checkLevelUp = () => {
+  while (gameState.levelExp >= gameState.levelMaxExp) {
+    const overflow = gameState.levelExp - gameState.levelMaxExp
+    gameState.level += 1
+    gameState.levelExp = overflow
+    gameState.levelMaxExp = Math.floor(gameState.levelMaxExp * 1.2)
+    gameState.freeAttributePoint += 1
+    saveGame()
+    return true
+  }
+  return false
+}
+
+export const addLevelExp = (exp) => {
+  gameState.levelExp += exp
+  const isLevelUp = checkLevelUp()
+  saveGame()
+  return isLevelUp
+}
 
 export const saveGame = () => {
   try {
@@ -153,7 +175,13 @@ export const loadGame = () => {
     if (saveData) {
       const parsedData = JSON.parse(saveData)
       if (parsedData.currentRealmId && parsedData.gold !== undefined) {
-        Object.assign(gameState, parsedData)
+        // 兼容旧存档：如果没有连打字段，手动添加默认值
+        const mergedData = {
+          ...parsedData,
+          isContinuousAttacking: parsedData.isContinuousAttacking || false,
+          continuousAttackTimerId: parsedData.continuousAttackTimerId || null
+        }
+        Object.assign(gameState, mergedData)
         startAgeTimer()
         return true
       }

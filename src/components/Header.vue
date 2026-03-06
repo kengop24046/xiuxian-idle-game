@@ -2,8 +2,11 @@
   <header class="bg-dark/90 border-b border-primary/30 p-4">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
       <div class="flex flex-col">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <h1 class="text-primary text-xl md:text-2xl font-bold">修仙挂机录</h1>
+          <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+            修仙等级 {{ level }}
+          </span>
           <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
             {{ age }}岁
           </span>
@@ -35,6 +38,19 @@
 
     <div class="mt-3">
       <div class="flex justify-between text-xs text-light/70 mb-1">
+        <span>等级经验</span>
+        <span>{{ formatNumber(levelExp) }} / {{ formatNumber(levelMaxExp) }}</span>
+      </div>
+      <div class="progress-bar">
+        <div 
+          class="progress-fill bg-gradient-to-r from-green-500 to-emerald-400" 
+          :style="{ width: levelExpProgress + '%' }"
+        ></div>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <div class="flex justify-between text-xs text-light/70 mb-1">
         <span>修为进度</span>
         <span>{{ expProgress.toFixed(2) }}%</span>
       </div>
@@ -57,9 +73,12 @@
 
 <script setup>
 import { computed } from 'vue'
-import { gameState, currentRealm, currentRealmExpNeed, currentRealmKillNeed, expProgress, killProgress } from '@/game/state.js'
+import { gameState, currentRealm, currentRealmExpNeed, currentRealmKillNeed, expProgress, killProgress, levelExpProgress } from '@/game/state.js'
 import { formatNumber } from '@/game/utils.js'
 
+const level = computed(() => gameState.level)
+const levelExp = computed(() => gameState.levelExp)
+const levelMaxExp = computed(() => gameState.levelMaxExp)
 const age = computed(() => gameState.age)
 const gold = computed(() => gameState.gold)
 const currentExp = computed(() => gameState.currentExp)

@@ -6,6 +6,7 @@
 
     <div class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">野外打怪</h2>
+      
       <div class="bg-dark/50 rounded-lg p-3 mb-4">
         <div class="flex justify-between items-center">
           <div>
@@ -56,21 +57,30 @@
       </div>
 
       <div v-else class="text-center py-8 text-light/60">
-        <p>暂无怪物，点击攻击按钮开始打怪</p>
+        <p>暂无怪物，点击攻击按钮刷新怪物并开始战斗</p>
       </div>
 
       <div class="flex flex-col md:flex-row gap-4">
         <button
           @click="handleAttack"
           class="flex-1 btn-primary text-xl py-4"
-          :disabled="isAttacking"
+          :disabled="isAttacking || autoBattle"
         >
           {{ isAttacking ? '攻击中...' : '攻击怪物' }}
         </button>
+
         <button
-          @click="toggleAutoBattle"
+          @click="handleStopContinuousAttack"
+          class="btn-secondary text-xl py-4 bg-orange-500/20 border-orange-500 text-orange-400"
+          :disabled="!isContinuousAttacking"
+        >
+          停止攻击
+        </button>
+        <button
+          @click="handleToggleAutoBattle"
           class="btn-secondary text-xl py-4"
           :class="autoBattle ? 'bg-success/20 border-success text-success' : ''"
+          :disabled="isAttacking"
         >
           {{ autoBattle ? '关闭自动打怪' : '开启自动打怪' }}
         </button>
@@ -83,7 +93,7 @@
             v-for="(log, index) in combatLogs"
             :key="index"
             class="text-sm mb-1"
-            :class="log.type === 'player' ? 'text-blue-400' : log.type === 'monster' ? 'text-red-400' : log.type === 'drop' ? 'text-yellow-400' : 'text-light/60'"
+            :class="log.type === 'player' ? 'text-blue-400' : log.type === 'monster' ? 'text-red-400' : log.type === 'drop' ? 'text-yellow-400' : log.type === 'levelUp' ? 'text-green-400' : 'text-light/60'"
           >
             {{ log.content }}
           </p>
@@ -133,20 +143,24 @@
 
 <script setup>
 import { ref, computed, onUnmounted, watch } from 'vue'
-import { attackMonster, toggleAutoBattle, generateMonster } from '@/game/combat.js'
+import { attackMonster, toggleAutoBattle, generateMonster, startContinuousAttack, stopContinuousAttack } from '@/game/combat.js'
 import { gameState, currentMap, playerTotalAttribute } from '@/game/state.js'
 import { formatNumber } from '@/game/utils.js'
 
 const tip = ref({ show: false, msg: '', type: '' })
 const isAttacking = ref(false)
 const combatLogs = ref([])
-const autoBattleTimer = ref(null)
+let autoBattleTimer = null
 
 const currentMonster = computed(() => gameState.currentMonster)
 const autoBattle = computed(() => gameState.autoBattle)
+const isContinuousAttacking = computed(() => gameState.isContinuousAttacking)
 const reincarnationCount = computed(() => gameState.reincarnationCount)
 const playerAttr = computed(() => playerTotalAttribute.value)
-const monsterHpPercent = computed(() => currentMonster.value ? Math.max(0, (currentMonster.value.currentHp / currentMonster.value.maxHp) * 100) : 0)
+const monsterHpPercent = computed(() => {
+  if (!currentMonster.value) return 0
+  return Math.max(0, (currentMonster.value.currentHp / currentMonster.value.maxHp) * 100)
+})
 
 const showTip = (success, msg) => {
   tip.value = { show: true, msg, type: success ? 'success' : 'error' }
@@ -159,76 +173,73 @@ const addCombatLog = (type, content) => {
 }
 
 const handleAttack = async () => {
-  if (isAttacking.value) return
+  if (isAttacking.value || autoBattle.value) return
   isAttacking.value = true
 
-  if (!currentMonster.value) {
-    const newMonster = generateMonster()
-    if (!newMonster) {
-      addCombatLog('system', '当前地图暂无怪物，请切换地图')
-      isAttacking.value = false
-      return
+  try {
+    if (!currentMonster.value) {
+      const newMonster = generateMonster()
+      if (!newMonster) {
+        addCombatLog('system', '当前地图无怪物，请切换地图')
+        showTip(false, '当前地图无怪物')
+        isAttacking.value = false
+        return
+      }
+      gameState.currentMonster = newMonster
+      addCombatLog('system', `遭遇了【${newMonster.name}】！`)
     }
-    gameState.currentMonster = newMonster
-    const monsterName = newMonster.name
-    addCombatLog('system', `遭遇了${monsterName}！`)
-  } else {
-    const monsterName = currentMonster.value.name
-    addCombatLog('system', `继续攻击${monsterName}！`)
-  }
 
-  while (currentMonster.value && currentMonster.value.currentHp > 0) {
-    const result = attackMonster()
-    if (result.type === 'attack') {
-      const currentMonsterName = currentMonster.value?.name
-      if (!currentMonsterName) break
-
-      if (result.isCrit) {
-        addCombatLog('player', `你触发暴击，对${currentMonsterName}造成${formatNumber(result.damage)}点伤害！`)
-      } else {
-        addCombatLog('player', `你对${currentMonsterName}造成${formatNumber(result.damage)}点伤害`)
-      }
-
-      if (result.monsterDead) {
-        addCombatLog('system', `你击杀了${currentMonsterName}！`)
-        if (result.drop) {
-          addCombatLog('drop', `获得${formatNumber(result.drop.gold)}金币，${formatNumber(result.drop.exp)}修为`)
-          result.drop.items.forEach(item => addCombatLog('drop', `获得${item.count}个${item.type === 'strengthenStone' ? '强化石' : item.type === 'upgradeStone' ? '升级石' : '升星石'}`))
-          if (result.drop.equipment) addCombatLog('drop', `获得装备：${result.drop.equipment.qualityName}·${result.drop.equipment.name}`)
-        }
-        break
-      }
-
-      if (result.playerHurt > 0) {
-        addCombatLog('monster', `${currentMonsterName}对你造成${formatNumber(result.playerHurt)}点伤害`)
-      } else {
-        addCombatLog('player', `你闪避了${currentMonsterName}的攻击！`)
-      }
+    const res = startContinuousAttack(200)
+    if (res.success) {
+      showTip(true, res.msg)
+    } else {
+      showTip(false, res.msg)
     }
-    await new Promise(resolve => setTimeout(resolve, 200))
+  } catch (e) {
+    console.error('攻击失败：', e)
+    addCombatLog('system', '攻击异常，请重试')
+    showTip(false, '攻击异常')
+  } finally {
+    isAttacking.value = false
   }
-  isAttacking.value = false
 }
 
-const startAutoBattle = () => {
-  if (autoBattleTimer.value) return
-  autoBattleTimer.value = setInterval(() => {
-    if (!isAttacking.value) {
+const handleStopContinuousAttack = () => {
+  stopContinuousAttack()
+  showTip(true, '已停止连续攻击')
+  addCombatLog('system', '手动停止连续攻击')
+}
+
+const handleToggleAutoBattle = () => {
+  const res = toggleAutoBattle()
+  showTip(res.success, res.msg)
+  if (res.success) {
+    addCombatLog('system', res.msg)
+  }
+}
+
+const startGlobalAutoBattle = () => {
+  if (autoBattleTimer) clearInterval(autoBattleTimer)
+  autoBattleTimer = setInterval(() => {
+    if (!isAttacking.value && autoBattle.value) {
       handleAttack()
     }
   }, 500)
 }
 
-const stopAutoBattle = () => {
-  if (autoBattleTimer.value) {
-    clearInterval(autoBattleTimer.value)
-    autoBattleTimer.value = null
+const stopGlobalAutoBattle = () => {
+  if (autoBattleTimer) {
+    clearInterval(autoBattleTimer)
+    autoBattleTimer = null
   }
 }
 
 watch(autoBattle, (newVal) => {
-  newVal ? startAutoBattle() : stopAutoBattle()
-})
+  newVal ? startGlobalAutoBattle() : stopGlobalAutoBattle()
+}, { immediate: true })
 
-onUnmounted(() => stopAutoBattle())
+onUnmounted(() => {
+  stopGlobalAutoBattle()
+  stopContinuousAttack()
+})
 </script>

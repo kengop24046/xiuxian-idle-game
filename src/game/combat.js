@@ -1,61 +1,35 @@
-import { gameState, currentMap, playerTotalAttribute, saveGame, currentRealmExpNeed } from './state.js'
-import { MONSTER_CONFIG, TRIAL_CONFIG, EQUIPMENT_CONFIG, MAP_CONFIG } from './config.js'
+import { gameState, currentMap, playerTotalAttribute, saveGame, currentRealmExpNeed, currentRealmKillNeed, addLevelExp } from './state.js'
+import { MONSTER_CONFIG, TRIAL_CONFIG, MAP_CONFIG, EQUIPMENT_CONFIG } from './config.js'
 import { randomInt, randomChance, generateEquipment } from './utils.js'
 
-export const generateMonster = () => {
-  const mapId = gameState.currentMapId
-  const currentMap = MAP_CONFIG.find(map => map.id === mapId)
-  const mapMonsters = MONSTER_CONFIG.filter(monster => monster.mapId === mapId)
-  if (mapMonsters.length === 0) return null
+export function generateMonster() {
+  const mid = gameState.currentMapId
+  const list = MONSTER_CONFIG.filter(m => m.mapId === mid)
+  if (!list.length) return null
 
-  let eliteRate = 20
-  if (currentMap.specialTag === 'elite_rate_up') eliteRate = 50
+  const idx = randomInt(0, list.length - 1)
+  const base = list[idx]
+  const mul = Math.pow(1.1, gameState.reincarnationCount)
 
-  let rareRate = 5
-  if (currentMap.specialTag === 'rare_monster_up') rareRate = 10
-  const rareMonsters = mapMonsters.filter(m => m.isRare)
-  const normalMonsters = mapMonsters.filter(m => !m.isElite && !m.isRare)
-  const eliteMonsters = mapMonsters.filter(m => m.isElite)
-
-  if (rareMonsters.length > 0 && randomChance(rareRate)) {
-    const targetMonster = rareMonsters[randomInt(0, rareMonsters.length - 1)]
-    const levelMultiplier = Math.pow(1.1, gameState.reincarnationCount)
-    return {
-      ...targetMonster,
-      maxHp: Math.floor(targetMonster.baseHp * levelMultiplier),
-      currentHp: Math.floor(targetMonster.baseHp * levelMultiplier),
-      attack: Math.floor(targetMonster.baseAttack * levelMultiplier * (currentMap.monsterAttackUp ? 1 + currentMap.monsterAttackUp : 1)),
-      defense: Math.floor(targetMonster.baseDefense * levelMultiplier),
-      gold: Math.floor(targetMonster.baseGold * currentMap.goldMultiplier * levelMultiplier),
-      exp: Math.floor(targetMonster.baseExp * currentMap.expMultiplier * levelMultiplier),
-    }
-  }
-
-  let targetMonster
-  if (eliteMonsters.length > 0 && randomChance(eliteRate)) {
-    targetMonster = eliteMonsters[randomInt(0, eliteMonsters.length - 1)]
-  } else {
-    targetMonster = normalMonsters[randomInt(0, normalMonsters.length - 1)]
-  }
-
-  const levelMultiplier = Math.pow(1.1, gameState.reincarnationCount)
   return {
-    ...targetMonster,
-    maxHp: Math.floor(targetMonster.baseHp * levelMultiplier),
-    currentHp: Math.floor(targetMonster.baseHp * levelMultiplier),
-    attack: Math.floor(targetMonster.baseAttack * levelMultiplier * (currentMap.monsterAttackUp ? 1 + currentMap.monsterAttackUp : 1)),
-    defense: Math.floor(targetMonster.baseDefense * levelMultiplier),
-    gold: Math.floor(targetMonster.baseGold * currentMap.goldMultiplier * levelMultiplier),
-    exp: Math.floor(targetMonster.baseExp * currentMap.expMultiplier * levelMultiplier),
+    ...base,
+    maxHp: Math.floor(base.baseHp * mul),
+    currentHp: Math.floor(base.baseHp * mul),
+    attack: Math.floor(base.baseAttack * mul),
+    defense: Math.floor(base.baseDefense * mul),
+    gold: Math.floor(base.baseGold * mul),
+    exp: Math.floor(base.baseExp * mul),
   }
 }
 
-export const generateTrialMonster = (layer) => {
+export function generateTrialMonster(layer) {
   const { baseHpMultiplier, baseAttackMultiplier, baseDefenseMultiplier, bossLayers } = TRIAL_CONFIG
   const isBoss = bossLayers.includes(layer)
   const levelMultiplier = Math.pow(1.15, layer - 1) * Math.pow(1.2, gameState.reincarnationCount)
 
-  const baseMonster = MONSTER_CONFIG[Math.min(Math.floor(layer / 10), MONSTER_CONFIG.length - 1)]
+  const monsterIndex = Math.min(Math.floor(layer / 10), MONSTER_CONFIG.length - 1)
+  const baseMonster = MONSTER_CONFIG[monsterIndex] || { baseHp: 100, baseAttack: 10, baseDefense: 5 }
+  
   const name = isBoss ? `试炼·第${layer}层·镇守BOSS` : `试炼·第${layer}层·妖兽`
 
   return {
@@ -69,125 +43,84 @@ export const generateTrialMonster = (layer) => {
   }
 }
 
-const calculateDamage = (attackerAttack, defenderDefense, isCrit = false, critDamage = 1.5) => {
-  const baseDamage = Math.max(1, attackerAttack - defenderDefense * 0.5)
-  return isCrit ? Math.floor(baseDamage * critDamage) : Math.floor(baseDamage)
+function calcDamage(atk, def, isCrit = false, critDamage = 1.5) {
+  const baseDamage = Math.max(1, Math.floor(atk - def * 0.5))
+  return isCrit ? Math.floor(baseDamage * critDamage) : baseDamage
 }
 
-export const attackMonster = () => {
-  const { currentMonster, autoBattle } = gameState
-  const playerAttr = playerTotalAttribute.value
-  if (!currentMonster) return { type: 'none', msg: '没有可攻击的怪物' }
+export function attackMonster() {
+  const p = playerTotalAttribute.value
+  const m = gameState.currentMonster
+  if (!m) return { type: 'none' }
 
-  const isCrit = randomChance(playerAttr.critRate)
-  const damage = calculateDamage(playerAttr.attack, currentMonster.defense, isCrit, playerAttr.critDamage)
-  currentMonster.currentHp -= damage
+  const isCrit = randomChance(p.critRate)
+  const dmg = calcDamage(p.attack, m.defense, isCrit, p.critDamage)
+  m.currentHp -= dmg
 
-  const result = {
-    type: 'attack',
-    damage,
+  const res = {
+    damage: dmg,
     isCrit,
     monsterDead: false,
-    playerHurt: 0,
-    playerDead: false,
     drop: null,
+    reachKillNeed: false,
+    levelUp: false
   }
 
-  if (currentMonster.currentHp <= 0) {
-    result.monsterDead = true
-    result.drop = handleMonsterDrop(currentMonster)
-    gameState.totalKillCount += 1
-    gameState.realmKillCount += 1
+  if (m.currentHp <= 0) {
+    res.monsterDead = true
+    gameState.totalKillCount++
+    gameState.realmKillCount++
+
+    const levelExpGained = Math.floor(m.exp / 5)
+    const isLevelUp = addLevelExp(levelExpGained)
+    res.levelUp = isLevelUp
+
+    const reach = gameState.realmKillCount >= currentRealmKillNeed.value
+    res.reachKillNeed = reach
+    if (reach) gameState.autoBattle = false
+
+    const drop = {
+      gold: m.gold,
+      exp: m.exp,
+      levelExp: levelExpGained,
+      items: []
+    }
+    gameState.gold += m.gold
+    gameState.currentExp += m.exp
+    
+    if (gameState.currentExp > currentRealmExpNeed.value) {
+      gameState.currentExp = currentRealmExpNeed.value
+    }
+
+    const itemType = ['strengthenStone', 'upgradeStone', 'starStone'][randomInt(0, 2)]
+    const itemCount = randomInt(1, 3)
+    drop.items.push({ type: itemType, count: itemCount })
+    gameState.items[itemType] += itemCount
+
+    if ((m.isElite || m.isRare) && randomChance(30 + p.dropRate * 100)) {
+      const equipLevel = Math.max(1, Math.floor(m.maxHp / 50))
+      const equipment = generateEquipment(equipLevel, 2, 5, 1.5)
+      gameState.bagEquipments.push(equipment)
+      drop.equipment = equipment
+    }
+
+    res.drop = drop
     gameState.currentMonster = null
-    if (autoBattle) {
-      gameState.currentMonster = generateMonster()
-    }
     saveGame()
-    return result
+
+    stopContinuousAttack()
   }
 
-  const isDodge = randomChance(playerAttr.dodgeRate)
-  if (!isDodge) {
-    const monsterDamage = calculateDamage(currentMonster.attack, playerAttr.defense)
-    result.playerHurt = monsterDamage
-  }
-
-  return result
+  return res
 }
 
-const handleMonsterDrop = (monster) => {
-  const playerAttr = playerTotalAttribute.value
-  const currentMap = MAP_CONFIG.find(map => map.id === gameState.currentMapId)
-  const mapMultiplier = currentMap.dropMultiplier
-  const dropRateBonus = playerAttr.dropRate * 100
-  const drop = {
-    gold: monster.gold,
-    exp: monster.exp,
-    items: [],
-    equipment: null,
-  }
-
-  gameState.gold += monster.gold
-  gameState.currentExp += monster.exp
-  const expNeed = currentRealmExpNeed.value
-  if (gameState.currentExp > expNeed) gameState.currentExp = expNeed
-
-  const stoneMultiplier = 1 + (currentMap.stoneDropUp || 0) + (currentMap.allStoneUp || 0)
-
-  if (randomChance(30 + dropRateBonus)) {
-    const itemTypes = ['strengthenStone', 'upgradeStone', 'starStone']
-    let weight = [1,1,1]
-    if (currentMap.specialTag === 'strengthen_stone_up') weight = [3,1,1]
-    if (currentMap.specialTag === 'upgrade_stone_up') weight = [1,3,1]
-    if (currentMap.specialTag === 'star_stone_up') weight = [1,1,3]
-
-    const randomNum = Math.random() * weight.reduce((a,b) => a+b, 0)
-    let itemType = 'strengthenStone'
-    if (randomNum < weight[0]) itemType = 'strengthenStone'
-    else if (randomNum < weight[0]+weight[1]) itemType = 'upgradeStone'
-    else itemType = 'starStone'
-
-    const baseCount = randomInt(1, monster.isElite ? 5 : 2)
-    const count = Math.max(1, Math.floor(baseCount * stoneMultiplier))
-    gameState.items[itemType] += count
-    drop.items.push({ type: itemType, count })
-  }
-
-  if (monster.trait === 'stone_drop' && randomChance(100)) {
-    const itemType = monster.mapId === 13 ? 'strengthenStone' : monster.mapId === 15 ? 'upgradeStone' : 'starStone'
-    const count = randomInt(1,2)
-    gameState.items[itemType] += count
-    drop.items.push({ type: itemType, count })
-  }
-
-  let baseEquipDropRate = monster.isElite ? 30 : 10
-  if (monster.isRare) baseEquipDropRate = 100
-  if (currentMap.equipDropUp) baseEquipDropRate *= (1 + currentMap.equipDropUp)
-  if (randomChance(baseEquipDropRate + dropRateBonus)) {
-    const equipLevel = Math.max(1, Math.floor(monster.maxHp / 50))
-    let qualityMax = monster.isElite ? 6 : 5
-    let qualityMin = currentMap.equipQualityMin || 0
-    if (monster.isRare) qualityMin = Math.max(qualityMin, 3)
-    const equipment = generateEquipment(equipLevel, qualityMin, qualityMax, mapMultiplier)
-    gameState.bagEquipments.push(equipment)
-    drop.equipment = equipment
-    if (monster.trait === 'double_drop') {
-      const extraEquip = generateEquipment(equipLevel, qualityMin, qualityMax, mapMultiplier)
-      gameState.bagEquipments.push(extraEquip)
-      drop.extraEquipment = extraEquip
-    }
-  }
-
-  return drop
-}
-
-export const attackTrialMonster = () => {
+export function attackTrialMonster() {
   const { trialMonster } = gameState
   const playerAttr = playerTotalAttribute.value
   if (!trialMonster) return { type: 'none', msg: '没有可攻击的试炼怪物' }
 
   const isCrit = randomChance(playerAttr.critRate)
-  const damage = calculateDamage(playerAttr.attack, trialMonster.defense, isCrit, playerAttr.critDamage)
+  const damage = calcDamage(playerAttr.attack, trialMonster.defense, isCrit, playerAttr.critDamage)
   trialMonster.currentHp -= damage
 
   const result = {
@@ -196,26 +129,24 @@ export const attackTrialMonster = () => {
     isCrit,
     monsterDead: false,
     playerHurt: 0,
-    playerDead: false,
     reward: null,
   }
 
   if (trialMonster.currentHp <= 0) {
     result.monsterDead = true
     result.reward = handleTrialReward(trialMonster)
+    
     if (trialMonster.layer >= gameState.trialMaxLayer) {
       gameState.trialMaxLayer = trialMonster.layer + 1
     }
     gameState.trialCurrentLayer = trialMonster.layer + 1
     gameState.trialMonster = null
     saveGame()
-    return result
-  }
-
-  const isDodge = randomChance(playerAttr.dodgeRate)
-  if (!isDodge) {
-    const monsterDamage = calculateDamage(trialMonster.attack, playerAttr.defense)
-    result.playerHurt = monsterDamage
+  } else {
+    const isDodge = randomChance(playerAttr.dodgeRate)
+    if (!isDodge) {
+      result.playerHurt = calcDamage(trialMonster.attack, playerAttr.defense)
+    }
   }
 
   return result
@@ -237,8 +168,6 @@ const handleTrialReward = (monster) => {
 
   const strengthenStone = Math.floor(baseReward.strengthenStone * multiplier * (isBoss ? bossReward.strengthenStone : 1))
   const upgradeStone = Math.floor(baseReward.upgradeStone * multiplier * (isBoss ? bossReward.upgradeStone : 1))
-  const starStone = Math.floor(baseReward.starStone * multiplier * (isBoss ? bossReward.starStone : 1))
-
   if (strengthenStone > 0) {
     gameState.items.strengthenStone += strengthenStone
     reward.items.push({ type: 'strengthenStone', count: strengthenStone })
@@ -247,25 +176,85 @@ const handleTrialReward = (monster) => {
     gameState.items.upgradeStone += upgradeStone
     reward.items.push({ type: 'upgradeStone', count: upgradeStone })
   }
-  if (starStone > 0) {
-    gameState.items.starStone += starStone
-    reward.items.push({ type: 'starStone', count: starStone })
-  }
 
-  const qualityMin = isBoss ? bossReward.equipQualityMin : Math.max(0, Math.floor(layer / 10) - 1)
-  const qualityMax = Math.min(7, Math.floor(layer / 10) + 2)
-  const equipLevel = layer * 2
-  const equipment = generateEquipment(equipLevel, qualityMin, qualityMax, multiplier)
-  gameState.bagEquipments.push(equipment)
-  reward.equipment = equipment
+  if (isBoss) {
+    const equipLevel = layer * 2
+    reward.equipment = generateEquipment(equipLevel, 3, 6, 2)
+    gameState.bagEquipments.push(reward.equipment)
+  }
 
   return reward
 }
 
-export const toggleAutoBattle = () => {
+export function stopContinuousAttack() {
+  if (gameState.continuousAttackTimerId) {
+    clearTimeout(gameState.continuousAttackTimerId)
+    gameState.continuousAttackTimerId = null
+  }
+  gameState.isContinuousAttacking = false
+}
+
+export function startContinuousAttack(interval = 200) {
+  if (!gameState.currentMonster) {
+    return { success: false, msg: '暂无怪物目标，请先刷新怪物' }
+  }
+  if (gameState.isContinuousAttacking) {
+    return { success: false, msg: '已在连续攻击中' }
+  }
+  if (gameState.autoBattle) {
+    return { success: false, msg: '已开启全局自动打怪，无需手动连打' }
+  }
+
+  gameState.isContinuousAttacking = true
+
+  const attackLoop = () => {
+    if (!gameState.currentMonster || gameState.autoBattle || !gameState.isContinuousAttacking) {
+      stopContinuousAttack()
+      return
+    }
+
+    attackMonster()
+
+    gameState.continuousAttackTimerId = setTimeout(attackLoop, interval)
+  }
+
+  attackMonster()
+  gameState.continuousAttackTimerId = setTimeout(attackLoop, interval)
+
+  return { success: true, msg: '开始连续攻击，直至怪物死亡' }
+}
+
+export function toggleAutoBattle() {
+  if (!gameState.autoBattle) {
+    if (gameState.realmKillCount >= currentRealmKillNeed.value) {
+      return { success: false, msg: '当前境界击杀数已达标，无需继续打怪' }
+    }
+    const mapMonsters = MONSTER_CONFIG.filter(m => m.mapId === gameState.currentMapId)
+    if (mapMonsters.length === 0) {
+      return { success: false, msg: '当前地图无怪物，无法开启自动打怪' }
+    }
+
+    stopContinuousAttack()
+  }
+
   gameState.autoBattle = !gameState.autoBattle
   if (gameState.autoBattle && !gameState.currentMonster) {
     gameState.currentMonster = generateMonster()
   }
   saveGame()
+  
+  return {
+    success: true,
+    msg: gameState.autoBattle ? '全局自动打怪已开启' : '全局自动打怪已关闭'
+  }
+}
+
+export default {
+  generateMonster,
+  generateTrialMonster,
+  attackMonster,
+  attackTrialMonster,
+  toggleAutoBattle,
+  startContinuousAttack,
+  stopContinuousAttack
 }
