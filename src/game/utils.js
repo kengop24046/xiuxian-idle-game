@@ -21,86 +21,88 @@ export const randomChance = (rate) => {
   return Math.random() * 100 <= rate
 }
 
-export const generateEquipment = (level, qualityMin = 0, qualityMax = 7, mapMultiplier = 1) => {
-  const { parts, quality, namePrefix, nameSuffix } = EQUIPMENT_CONFIG
-  
-  let targetQuality
-  const qualityList = quality.slice(qualityMin, qualityMax + 1)
-  const totalRate = qualityList.reduce((sum, q) => sum + q.dropRate, 0)
-  let random = randomFloat(0, totalRate)
-  let currentRate = 0
-  for (const q of qualityList) {
-    currentRate += q.dropRate
-    if (random <= currentRate) {
-      targetQuality = q
+export function generateEquipment(level, minQuality = 1, maxQuality = 5, multiplier = 1) {
+  level = Math.max(1, Number(level) || 1)
+  minQuality = Math.max(1, Math.min(Number(minQuality) || 1, EQUIPMENT_CONFIG.qualityList.length))
+  maxQuality = Math.max(minQuality, Math.min(Number(maxQuality) || 5, EQUIPMENT_CONFIG.qualityList.length))
+  multiplier = Math.max(1, Number(multiplier) || 1)
+
+  const parts = EQUIPMENT_CONFIG.parts
+  const randomPart = parts[randomInt(0, parts.length - 1)]
+
+  const qualityWeights = {
+    1: 100,
+    2: 80,
+    3: 50,
+    4: 25,
+    5: 10,
+    6: 3
+  }
+  let totalWeight = 0
+  const validQualities = []
+  for (let q = minQuality; q <= maxQuality; q++) {
+    totalWeight += qualityWeights[q]
+    validQualities.push({ quality: q, weight: qualityWeights[q] })
+  }
+
+  let randomNum = randomInt(1, totalWeight)
+  let currentWeight = 0
+  let selectedQuality = minQuality
+  for (let q of validQualities) {
+    currentWeight += q.weight
+    if (randomNum <= currentWeight) {
+      selectedQuality = q.quality
       break
     }
   }
-  if (!targetQuality) targetQuality = qualityList[0]
+  const qualityInfo = EQUIPMENT_CONFIG.qualityList[selectedQuality - 1]
 
-  const part = parts[randomInt(0, parts.length - 1)]
-  
-  const prefix = namePrefix[randomInt(0, namePrefix.length - 1)]
-  const suffixList = nameSuffix[part.id]
-  const suffix = suffixList[randomInt(0, suffixList.length - 1)]
-  const name = `${prefix}${suffix}`
+  const baseAttrMulti = level * multiplier * qualityInfo.attrMultiplier
+  const basePower = Math.floor(randomInt(1, 3) * baseAttrMulti)
+  const baseConstitution = Math.floor(randomInt(1, 3) * baseAttrMulti)
+  const baseAgility = Math.floor(randomInt(1, 3) * baseAttrMulti)
+  const baseComprehension = Math.floor(randomInt(0, 2) * baseAttrMulti)
+  const baseLuck = Math.floor(randomInt(0, 2) * baseAttrMulti)
 
-  const baseLevel = Math.max(1, level)
-  const baseAttrValue = baseLevel * 10 * targetQuality.baseMultiplier * mapMultiplier
-  
-  const mainAttr = {}
-  switch (part.mainAttr) {
-    case 'attack':
-      mainAttr.attack = Math.floor(baseAttrValue * 1.2)
-      break
-    case 'hp':
-      mainAttr.hp = Math.floor(baseAttrValue * 5)
-      break
-    case 'defense':
-      mainAttr.defense = Math.floor(baseAttrValue * 0.8)
-      break
-    case 'power':
-      mainAttr.power = Math.floor(baseAttrValue * 0.5)
-      break
-    case 'constitution':
-      mainAttr.constitution = Math.floor(baseAttrValue * 0.5)
-      break
-    case 'agility':
-      mainAttr.agility = Math.floor(baseAttrValue * 0.5)
-      break
-    case 'comprehension':
-      mainAttr.comprehension = Math.floor(baseAttrValue * 0.5)
-      break
-    case 'luck':
-      mainAttr.luck = Math.floor(baseAttrValue * 0.5)
-      break
+  let baseAttack = 0
+  let baseHp = 0
+  let baseDefense = 0
+  if (randomPart.id === 'weapon') {
+    baseAttack = Math.floor(randomInt(3, 6) * baseAttrMulti)
+  } else if (['armor', 'helmet', 'shoes', 'belt', 'bracers'].includes(randomPart.id)) {
+    baseHp = Math.floor(randomInt(10, 20) * baseAttrMulti)
+    baseDefense = Math.floor(randomInt(2, 4) * baseAttrMulti)
+  } else {
+    baseAttack = Math.floor(randomInt(1, 3) * baseAttrMulti)
+    baseHp = Math.floor(randomInt(5, 10) * baseAttrMulti)
+    baseDefense = Math.floor(randomInt(1, 2) * baseAttrMulti)
   }
 
-  const extraAttrs = {}
-  const attrKeys = ['attack', 'hp', 'defense', 'power', 'constitution', 'agility', 'comprehension', 'luck']
-  const extraAttrCount = targetQuality.attrCount - 1
-  for (let i = 0; i < extraAttrCount; i++) {
-    const randomAttr = attrKeys[randomInt(0, attrKeys.length - 1)]
-    const attrValue = Math.floor(baseAttrValue * randomFloat(0.3, 0.8))
-    extraAttrs[randomAttr] = (extraAttrs[randomAttr] || 0) + attrValue
-  }
-
-  const attrs = { ...mainAttr, ...extraAttrs }
-
-  const id = Date.now() + randomInt(0, 10000)
+  const prefixList = ['破损的', '普通的', '精良的', '优质的', '史诗的', '传说的', '逆天的']
+  const prefix = prefixList[Math.min(selectedQuality, prefixList.length - 1)]
+  const equipName = `${prefix}${randomPart.name}`
 
   return {
-    id,
-    name,
-    partId: part.id,
-    partName: part.name,
-    qualityId: targetQuality.id,
-    qualityName: targetQuality.name,
-    qualityColor: targetQuality.color,
-    level: baseLevel,
+    id: Date.now() + '-' + randomInt(1000, 9999),
+    name: equipName,
+    partId: randomPart.id,
+    partName: randomPart.name,
+    qualityId: selectedQuality,
+    qualityName: qualityInfo.name,
+    qualityColor: qualityInfo.color,
+    level: level,
     strengthenLevel: 0,
-    star: 0,
-    attrs,
+    star: 1,
+    setId: null,
+    setName: '',
+    baseAttack: baseAttack,
+    baseHp: baseHp,
+    baseDefense: baseDefense,
+    power: basePower,
+    constitution: baseConstitution,
+    agility: baseAgility,
+    comprehension: baseComprehension,
+    luck: baseLuck,
   }
 }
 

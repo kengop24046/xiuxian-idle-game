@@ -1,5 +1,5 @@
 import { gameState, currentMap, playerTotalAttribute, saveGame, currentRealmExpNeed, currentRealmKillNeed, addLevelExp, playerMaxHp, playerRevive } from './state.js'
-import { MONSTER_CONFIG, TRIAL_CONFIG, MAP_CONFIG, EQUIPMENT_CONFIG, MONSTER_STRENGTH_CONFIG } from './config.js'
+import { MONSTER_CONFIG, TRIAL_CONFIG, MAP_CONFIG, EQUIPMENT_CONFIG, MONSTER_STRENGTH_CONFIG, EQUIPMENT_SET_CONFIG, PILL_CONFIG } from './config.js'
 import { randomInt, randomChance, generateEquipment } from './utils.js'
 
 export function generateMonster() {
@@ -43,6 +43,8 @@ export function generateMonster() {
 
     return {
       ...targetMonster,
+      isRare: true,
+      isElite: false,
       maxHp: Math.floor(targetMonster.baseHp * finalMulti),
       currentHp: Math.floor(targetMonster.baseHp * finalMulti),
       attack: Math.floor(targetMonster.baseAttack * attackMulti * (currentMapData.monsterAttackUp ? 1 + currentMapData.monsterAttackUp : 1)),
@@ -61,6 +63,8 @@ export function generateMonster() {
 
     return {
       ...targetMonster,
+      isElite: true,
+      isRare: false,
       maxHp: Math.floor(targetMonster.baseHp * finalMulti),
       currentHp: Math.floor(targetMonster.baseHp * finalMulti),
       attack: Math.floor(targetMonster.baseAttack * attackMulti * (currentMapData.monsterAttackUp ? 1 + currentMapData.monsterAttackUp : 1)),
@@ -72,6 +76,8 @@ export function generateMonster() {
     targetMonster = normalMonsters[randomInt(0, normalMonsters.length - 1)]
     return {
       ...targetMonster,
+      isElite: false,
+      isRare: false,
       maxHp: Math.floor(targetMonster.baseHp * totalBaseMulti),
       currentHp: Math.floor(targetMonster.baseHp * totalBaseMulti),
       attack: Math.floor(targetMonster.baseAttack * totalBaseMulti * (currentMapData.monsterAttackUp ? 1 + currentMapData.monsterAttackUp : 1)),
@@ -124,13 +130,20 @@ export function attackMonster() {
     playerDead: false,
     drop: null,
     reachKillNeed: false,
-    levelUp: false
+    levelUp: false,
+    newMonster: null
   }
 
   if (m.currentHp <= 0) {
     res.monsterDead = true
     gameState.totalKillCount++
     gameState.realmKillCount++
+
+    if (m.monsterId) {
+      gameState.monsterKillCount[m.monsterId] = (gameState.monsterKillCount[m.monsterId] || 0) + 1
+    }
+    if (m.isElite) gameState.eliteKillCount++
+    if (m.isRare) gameState.rareKillCount++
 
     const levelExpGained = Math.floor(m.exp / 5)
     const isLevelUp = addLevelExp(levelExpGained)
@@ -144,9 +157,12 @@ export function attackMonster() {
       gold: m.gold,
       exp: m.exp,
       levelExp: levelExpGained,
-      items: []
+      items: [],
+      equipment: null,
+      pills: []
     }
     gameState.gold += m.gold
+    gameState.totalGoldGet += m.gold
     gameState.currentExp += m.exp
     
     if (gameState.currentExp > currentRealmExpNeed.value) {
@@ -158,15 +174,71 @@ export function attackMonster() {
     gameState.items[itemType] = (Number(gameState.items[itemType]) || 0) + itemCount
     drop.items.push({ type: itemType, count: itemCount })
 
-    if ((m.isElite || m.isRare) && randomChance(30 + p.dropRate * 100)) {
-      const equipLevel = Math.max(1, Math.floor(m.maxHp / 50))
-      const equipment = generateEquipment(equipLevel, 2, 5, 1.5)
-      gameState.bagEquipments.push(equipment)
-      drop.equipment = equipment
+    if (randomChance(15)) {
+      const pillList = ['expPill', 'attackPill', 'defensePill']
+      const pillId = pillList[randomInt(0, pillList.length - 1)]
+      const pillCount = randomInt(1, 2)
+      gameState.pills[pillId] = (gameState.pills[pillId] || 0) + pillCount
+      drop.pills.push({ id: pillId, count: pillCount })
+    }
+    if (m.isRare && randomChance(30)) {
+      gameState.pills.superExpPill = (gameState.pills.superExpPill || 0) + 1
+      drop.pills.push({ id: 'superExpPill', count: 1 })
+    }
+
+    let dropRate = 0
+    if (m.isRare) {
+      dropRate = 60 + (p.dropRate * 100)
+    } else if (m.isElite) {
+      dropRate = 40 + (p.dropRate * 100)
+    } else {
+      dropRate = 5 + (p.dropRate * 100)
+    }
+    dropRate = Math.min(dropRate, 95)
+
+    if (randomChance(dropRate)) {
+      const equipLevel = Math.max(1, Math.floor(Number(m.maxHp) / 40) || 1)
+      let minQuality = 1
+      let maxQuality = 3
+      if (m.isElite) {
+        minQuality = 2
+        maxQuality = 5
+      }
+      if (m.isRare) {
+        minQuality = 3
+        maxQuality = 6
+      }
+      
+      const equipment = generateEquipment(equipLevel, minQuality, maxQuality, m.isRare ? 2 : 1.2)
+      
+      if (equipment && randomChance(m.isRare ? 40 : m.isElite ? 20 : 5)) {
+        const availableSets = EQUIPMENT_SET_CONFIG.filter(set => 
+          gameState.currentMapId >= set.minMapId && gameState.currentMapId <= set.maxMapId && equipment.qualityId >= set.minQuality
+        )
+        if (availableSets.length > 0) {
+          const randomSet = availableSets[randomInt(0, availableSets.length - 1)]
+          if (randomSet.parts.includes(equipment.partId)) {
+            equipment.setId = randomSet.setId
+            equipment.setName = randomSet.setName
+          }
+        }
+      }
+
+      if (equipment && equipment.id) {
+        if (!Array.isArray(gameState.bagEquipments)) {
+          gameState.bagEquipments = []
+        }
+        gameState.bagEquipments.push(equipment)
+        drop.equipment = equipment
+      }
     }
 
     res.drop = drop
-    gameState.currentMonster = null
+
+    const newMonster = generateMonster()
+    gameState.currentMonster = newMonster
+    res.newMonster = newMonster
+
     saveGame()
     stopContinuousAttack()
     return res
@@ -244,6 +316,7 @@ const handleTrialReward = (monster) => {
   }
 
   gameState.gold += reward.gold
+  gameState.totalGoldGet += reward.gold
 
   const strengthenStone = Math.floor(baseReward.strengthenStone * multiplier * (isBoss ? bossReward.strengthenStone : 1))
   const upgradeStone = Math.floor(baseReward.upgradeStone * multiplier * (isBoss ? bossReward.upgradeStone : 1))
@@ -257,9 +330,14 @@ const handleTrialReward = (monster) => {
   }
 
   if (isBoss) {
-    const equipLevel = layer * 2
+    const equipLevel = Math.max(1, layer * 2)
     reward.equipment = generateEquipment(equipLevel, 3, 6, 2)
-    gameState.bagEquipments.push(reward.equipment)
+    if (reward.equipment && reward.equipment.id) {
+      if (!Array.isArray(gameState.bagEquipments)) {
+        gameState.bagEquipments = []
+      }
+      gameState.bagEquipments.push(reward.equipment)
+    }
   }
 
   return reward

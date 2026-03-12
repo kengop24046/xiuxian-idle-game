@@ -3,6 +3,7 @@
     <div v-if="tip.show" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg" :class="tip.type === 'success' ? 'bg-success text-white' : 'bg-danger text-white'">
       {{ tip.msg }}
     </div>
+
     <div class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">穿戴装备</h2>
       <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
@@ -20,6 +21,9 @@
           >
             <p class="text-xs font-bold line-clamp-1">{{ equippedEquipments[part.id].name }}</p>
             <p class="text-[10px] opacity-80">{{ equippedEquipments[part.id].qualityName }}</p>
+            <p v-if="equippedEquipments[part.id].setId" class="text-[9px] text-primary font-semibold mt-0.5">
+              {{ equippedEquipments[part.id].setName }}
+            </p>
           </div>
           <div v-else class="w-full aspect-square rounded-lg border-2 border-dashed border-light/20 flex items-center justify-center mb-2">
             <span class="text-light/30 text-xs">空</span>
@@ -28,6 +32,7 @@
         </div>
       </div>
     </div>
+
     <div v-if="selectedEquipment" class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">装备详情</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -35,6 +40,9 @@
           <div class="rounded-lg border-2 p-4 text-center mb-4" :class="selectedEquipment.qualityColor">
             <h3 class="text-xl font-bold">{{ selectedEquipment.name }}</h3>
             <p class="text-sm">{{ selectedEquipment.qualityName }} · {{ selectedEquipment.partName }}</p>
+            <p v-if="selectedEquipment.setId" class="text-xs text-primary mt-1 font-semibold">
+              【{{ selectedEquipment.setName }}】套装部件
+            </p>
             <div class="flex justify-center gap-4 mt-2 text-sm">
               <span>Lv.{{ selectedEquipment.level }}</span>
               <span>+{{ selectedEquipment.strengthenLevel }} 强化</span>
@@ -44,6 +52,7 @@
               {{ isCurrentEquipped ? '【当前已穿戴】' : compareTipText }}
             </p>
           </div>
+          
           <div class="bg-dark/50 rounded-lg p-3 mb-4">
             <h4 class="text-light/80 font-semibold mb-2">
               装备属性
@@ -69,6 +78,7 @@
               </div>
             </div>
           </div>
+          
           <div class="flex gap-2">
             <button
               v-if="!isCurrentEquipped"
@@ -89,6 +99,7 @@
             </button>
           </div>
         </div>
+        
         <div class="space-y-4">
           <div class="bg-dark/50 rounded-lg p-3">
             <h4 class="text-light/80 font-semibold mb-2">强化（当前 +{{ selectedEquipment.strengthenLevel }} / {{ EQUIPMENT_CONFIG.strengthen.maxLevel }}）</h4>
@@ -107,6 +118,7 @@
               强化装备
             </button>
           </div>
+          
           <div class="bg-dark/50 rounded-lg p-3">
             <h4 class="text-light/80 font-semibold mb-2">升级（当前 Lv.{{ selectedEquipment.level }}）</h4>
             <p class="text-light/60 text-xs mb-2">提升装备等级，增加基础属性上限</p>
@@ -124,6 +136,7 @@
               升级装备
             </button>
           </div>
+          
           <div class="bg-dark/50 rounded-lg p-3">
             <h4 class="text-light/80 font-semibold mb-2">升星（当前 {{ selectedEquipment.star }}★ / {{ EQUIPMENT_CONFIG.starUp.maxStar }}★）</h4>
             <p class="text-light/60 text-xs mb-2">每星增加15%总属性，提升巨大</p>
@@ -144,6 +157,7 @@
         </div>
       </div>
     </div>
+
     <div class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">背包装备</h2>
       <div v-if="bagEquipments.length === 0" class="text-center py-8 text-light/60">
@@ -159,6 +173,9 @@
         >
           <p class="text-sm font-bold line-clamp-1">{{ equipment.name }}</p>
           <p class="text-[10px] opacity-80">{{ equipment.qualityName }}</p>
+          <p v-if="equipment.setId" class="text-[9px] text-primary font-semibold mt-0.5">
+            {{ equipment.setName }}
+          </p>
           <div class="flex justify-between text-[10px] mt-1">
             <span>Lv.{{ equipment.level }}</span>
             <span>+{{ equipment.strengthenLevel }}</span>
@@ -169,6 +186,7 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, computed } from 'vue'
 import { wearEquipment, unwearEquipment, decomposeEquipment, strengthenEquipment, upgradeEquipment, starUpEquipment, calculateEquipmentAttr } from '@/game/equipment.js'
@@ -206,11 +224,15 @@ const equippedCompareAttr = computed(() => {
   return calculateEquipmentAttr(currentEquippedCompare.value)
 })
 
+const equipmentFinalAttr = computed(() => {
+  if (!selectedEquipment.value) return {}
+  return calculateEquipmentAttr(selectedEquipment.value)
+})
+
 const attrDifference = computed(() => {
   const diff = {}
   const selectAttr = equipmentFinalAttr.value
   const equipAttr = equippedCompareAttr.value
-
   Object.keys(attrNameMap).forEach(key => {
     const selectValue = selectAttr[key] || 0
     const equipValue = equipAttr[key] || 0
@@ -232,22 +254,19 @@ const selectEquipment = (equipment) => {
   selectedEquipment.value = equipment ? JSON.parse(JSON.stringify(equipment)) : null
 }
 
-const equipmentFinalAttr = computed(() => {
-  if (!selectedEquipment.value) return {}
-  return calculateEquipmentAttr(selectedEquipment.value)
-})
-
 const strengthenCost = computed(() => {
   if (!selectedEquipment.value) return 0
   const { strengthen } = EQUIPMENT_CONFIG
   const { strengthenLevel, qualityId } = selectedEquipment.value
   return Math.floor(strengthen.baseCost * (qualityId + 1) * Math.pow(1.5, strengthenLevel))
 })
+
 const upgradeCost = computed(() => {
   if (!selectedEquipment.value) return 0
   const { qualityId, level } = selectedEquipment.value
   return Math.floor(2 * (qualityId + 1) * Math.pow(1.6, level - 1))
 })
+
 const starCost = computed(() => {
   if (!selectedEquipment.value) return 0
   const { starUp } = EQUIPMENT_CONFIG

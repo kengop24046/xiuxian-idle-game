@@ -56,7 +56,7 @@
         </div>
         <div class="flex justify-between">
           <span class="text-light/70">游戏版本</span>
-          <span class="text-light">1.0.0</span>
+          <span class="text-light">1.1.0</span>
         </div>
         <div class="flex justify-between">
           <span class="text-light/70">技术栈</span>
