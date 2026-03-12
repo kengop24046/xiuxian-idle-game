@@ -4,8 +4,11 @@
       <div class="flex flex-col">
         <div class="flex items-center gap-2 flex-wrap">
           <h1 class="text-primary text-xl md:text-2xl font-bold">修仙挂机录</h1>
+          <span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
+            血量 {{ formatNumber(currentHp) }}/{{ formatNumber(maxHp) }}
+          </span>
           <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
-            修仙等级 {{ level }}
+            等级 {{ level }}
           </span>
           <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
             {{ age }}岁
@@ -15,6 +18,9 @@
           </span>
         </div>
         <p class="text-light/80 text-sm">当前境界：{{ currentRealm.name }} {{ currentLevel }}层</p>
+        <p v-if="isPlayerDead" class="text-red-500 text-sm font-bold mt-1">
+          你已死亡！<button @click="handleRevive" class="underline ml-2">点击复活</button>
+        </p>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div class="flex flex-col">
@@ -33,6 +39,19 @@
           <span class="text-light/60 text-xs">属性点</span>
           <span class="text-green-400 font-semibold">{{ freeAttributePoint > 0 ? freeAttributePoint : '无' }}</span>
         </div>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <div class="flex justify-between text-xs text-light/70 mb-1">
+        <span>气血</span>
+        <span>{{ hpProgress.toFixed(2) }}%</span>
+      </div>
+      <div class="progress-bar">
+        <div 
+          class="progress-fill bg-gradient-to-r from-red-600 to-red-400" 
+          :style="{ width: hpProgress + '%' }"
+        ></div>
       </div>
     </div>
 
@@ -73,8 +92,15 @@
 
 <script setup>
 import { computed } from 'vue'
-import { gameState, currentRealm, currentRealmExpNeed, currentRealmKillNeed, expProgress, killProgress, levelExpProgress } from '@/game/state.js'
+import { 
+  gameState, currentRealm, currentRealmExpNeed, currentRealmKillNeed, 
+  expProgress, killProgress, levelExpProgress, playerMaxHp, hpProgress, playerRevive
+} from '@/game/state.js'
 import { formatNumber } from '@/game/utils.js'
+
+const currentHp = computed(() => gameState.currentHp)
+const maxHp = computed(() => playerMaxHp.value)
+const isPlayerDead = computed(() => gameState.isPlayerDead)
 
 const level = computed(() => gameState.level)
 const levelExp = computed(() => gameState.levelExp)
@@ -89,4 +115,8 @@ const freeAttributePoint = computed(() => gameState.freeAttributePoint)
 const reincarnationCount = computed(() => gameState.reincarnationCount)
 const expNeed = computed(() => currentRealmExpNeed.value)
 const killNeed = computed(() => currentRealmKillNeed.value)
+
+const handleRevive = () => {
+  playerRevive()
+}
 </script>

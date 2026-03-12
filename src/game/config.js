@@ -490,3 +490,80 @@ export const ITEM_CONFIG = {
   resetPill: { name: '洗点水', desc: '重置所有属性点，重新分配' },
   expPill: { name: '修为丹', desc: '使用后获得大量修为' },
 }
+
+export const LEVEL_ATTR_CONFIG = {
+  power: 1,
+  constitution: 1,
+  agility: 1,
+  comprehension: 0.5,
+  luck: 0.5
+}
+
+export const REALM_LEVEL_ATTR = {
+  power: 2,
+  constitution: 2,
+  agility: 2,
+  comprehension: 1,
+  luck: 1
+}
+
+export const BIG_REALM_BONUS = {
+  1: {
+    baseAttr: { power: 5, constitution: 5, agility: 5, comprehension: 3, luck: 3 },
+    multiplier: 1.0
+  },
+  2: {
+    baseAttr: { power: 15, constitution: 15, agility: 15, comprehension: 10, luck: 10 },
+    multiplier: 1.05
+  },
+  3: {
+    baseAttr: { power: 30, constitution: 30, agility: 30, comprehension: 20, luck: 20 },
+    multiplier: 1.12
+  },
+  4: {
+    baseAttr: { power: 50, constitution: 50, agility: 50, comprehension: 35, luck: 35 },
+    multiplier: 1.2
+  },
+  5: {
+    baseAttr: { power: 80, constitution: 80, agility: 80, comprehension: 60, luck: 60 },
+    multiplier: 1.3
+  },
+  6: {
+    baseAttr: { power: 120, constitution: 120, agility: 120, comprehension: 90, luck: 90 },
+    multiplier: 1.42
+  },
+  7: {
+    baseAttr: { power: 180, constitution: 180, agility: 180, comprehension: 130, luck: 130 },
+    multiplier: 1.55
+  },
+  8: {
+    baseAttr: { power: 250, constitution: 250, agility: 250, comprehension: 180, luck: 180 },
+    multiplier: 1.7
+  },
+  9: {
+    baseAttr: { power: 350, constitution: 350, agility: 350, comprehension: 250, luck: 250 },
+    multiplier: 1.9
+  },
+  10: {
+    baseAttr: { power: 500, constitution: 500, agility: 500, comprehension: 400, luck: 400 },
+    multiplier: 2.2
+  }
+}
+
+export const MONSTER_STRENGTH_CONFIG = {
+  mapMultiplier: 1.15,
+  realmMultiplier: 1.08,
+  levelMultiplier: 1.005,
+  reincarnationMultiplier: 1.2,
+  eliteBonus: {
+    hp: 2.5,
+    attack: 1.8,
+    defense: 1.5,
+  },
+  rareBonus: {
+    hp: 4,
+    attack: 2.5,
+    defense: 2,
+  },
+  maxMultiplier: 15,
+}

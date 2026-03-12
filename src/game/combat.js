@@ -1,24 +1,84 @@
-import { gameState, currentMap, playerTotalAttribute, saveGame, currentRealmExpNeed, currentRealmKillNeed, addLevelExp } from './state.js'
-import { MONSTER_CONFIG, TRIAL_CONFIG, MAP_CONFIG, EQUIPMENT_CONFIG } from './config.js'
+import { gameState, currentMap, playerTotalAttribute, saveGame, currentRealmExpNeed, currentRealmKillNeed, addLevelExp, playerMaxHp, playerRevive } from './state.js'
+import { MONSTER_CONFIG, TRIAL_CONFIG, MAP_CONFIG, EQUIPMENT_CONFIG, MONSTER_STRENGTH_CONFIG } from './config.js'
 import { randomInt, randomChance, generateEquipment } from './utils.js'
 
 export function generateMonster() {
   const mid = gameState.currentMapId
-  const list = MONSTER_CONFIG.filter(m => m.mapId === mid)
-  if (!list.length) return null
+  const currentMapData = MAP_CONFIG.find(map => map.id === mid)
+  const mapMonsters = MONSTER_CONFIG.filter(monster => monster.mapId === mid)
+  if (mapMonsters.length === 0) return null
 
-  const idx = randomInt(0, list.length - 1)
-  const base = list[idx]
-  const mul = Math.pow(1.1, gameState.reincarnationCount)
+  let eliteRate = 20
+  if (currentMapData.specialTag === 'elite_rate_up') eliteRate = 50
+  let rareRate = 5
+  if (currentMapData.specialTag === 'rare_monster_up') rareRate = 10
 
-  return {
-    ...base,
-    maxHp: Math.floor(base.baseHp * mul),
-    currentHp: Math.floor(base.baseHp * mul),
-    attack: Math.floor(base.baseAttack * mul),
-    defense: Math.floor(base.baseDefense * mul),
-    gold: Math.floor(base.baseGold * mul),
-    exp: Math.floor(base.baseExp * mul),
+  const rareMonsters = mapMonsters.filter(m => m.isRare)
+  const normalMonsters = mapMonsters.filter(m => !m.isElite && !m.isRare)
+  const eliteMonsters = mapMonsters.filter(m => m.isElite)
+
+  const { 
+    mapMultiplier, 
+    realmMultiplier, 
+    levelMultiplier, 
+    reincarnationMultiplier,
+    eliteBonus,
+    rareBonus,
+    maxMultiplier
+  } = MONSTER_STRENGTH_CONFIG
+
+  const mapBaseMulti = Math.pow(mapMultiplier, mid - 1)
+  const realmBaseMulti = Math.pow(realmMultiplier, gameState.currentRealmId - 1)
+  const levelBaseMulti = Math.pow(levelMultiplier, gameState.level - 1)
+  const reincarnationBaseMulti = Math.pow(reincarnationMultiplier, gameState.reincarnationCount)
+
+  let totalBaseMulti = mapBaseMulti * realmBaseMulti * levelBaseMulti * reincarnationBaseMulti
+  totalBaseMulti = Math.min(totalBaseMulti, maxMultiplier)
+
+  if (rareMonsters.length > 0 && randomChance(rareRate)) {
+    const targetMonster = rareMonsters[randomInt(0, rareMonsters.length - 1)]
+    const finalMulti = totalBaseMulti * rareBonus.hp
+    const attackMulti = totalBaseMulti * rareBonus.attack
+    const defenseMulti = totalBaseMulti * rareBonus.defense
+
+    return {
+      ...targetMonster,
+      maxHp: Math.floor(targetMonster.baseHp * finalMulti),
+      currentHp: Math.floor(targetMonster.baseHp * finalMulti),
+      attack: Math.floor(targetMonster.baseAttack * attackMulti * (currentMapData.monsterAttackUp ? 1 + currentMapData.monsterAttackUp : 1)),
+      defense: Math.floor(targetMonster.baseDefense * defenseMulti),
+      gold: Math.floor(targetMonster.baseGold * currentMapData.goldMultiplier * totalBaseMulti),
+      exp: Math.floor(targetMonster.baseExp * currentMapData.expMultiplier * totalBaseMulti),
+    }
+  }
+
+  let targetMonster
+  if (eliteMonsters.length > 0 && randomChance(eliteRate)) {
+    targetMonster = eliteMonsters[randomInt(0, eliteMonsters.length - 1)]
+    const finalMulti = totalBaseMulti * eliteBonus.hp
+    const attackMulti = totalBaseMulti * eliteBonus.attack
+    const defenseMulti = totalBaseMulti * eliteBonus.defense
+
+    return {
+      ...targetMonster,
+      maxHp: Math.floor(targetMonster.baseHp * finalMulti),
+      currentHp: Math.floor(targetMonster.baseHp * finalMulti),
+      attack: Math.floor(targetMonster.baseAttack * attackMulti * (currentMapData.monsterAttackUp ? 1 + currentMapData.monsterAttackUp : 1)),
+      defense: Math.floor(targetMonster.baseDefense * defenseMulti),
+      gold: Math.floor(targetMonster.baseGold * currentMapData.goldMultiplier * totalBaseMulti),
+      exp: Math.floor(targetMonster.baseExp * currentMapData.expMultiplier * totalBaseMulti),
+    }
+  } else {
+    targetMonster = normalMonsters[randomInt(0, normalMonsters.length - 1)]
+    return {
+      ...targetMonster,
+      maxHp: Math.floor(targetMonster.baseHp * totalBaseMulti),
+      currentHp: Math.floor(targetMonster.baseHp * totalBaseMulti),
+      attack: Math.floor(targetMonster.baseAttack * totalBaseMulti * (currentMapData.monsterAttackUp ? 1 + currentMapData.monsterAttackUp : 1)),
+      defense: Math.floor(targetMonster.baseDefense * totalBaseMulti),
+      gold: Math.floor(targetMonster.baseGold * currentMapData.goldMultiplier * totalBaseMulti),
+      exp: Math.floor(targetMonster.baseExp * currentMapData.expMultiplier * totalBaseMulti),
+    }
   }
 }
 
@@ -26,12 +86,10 @@ export function generateTrialMonster(layer) {
   const { baseHpMultiplier, baseAttackMultiplier, baseDefenseMultiplier, bossLayers } = TRIAL_CONFIG
   const isBoss = bossLayers.includes(layer)
   const levelMultiplier = Math.pow(1.15, layer - 1) * Math.pow(1.2, gameState.reincarnationCount)
-
   const monsterIndex = Math.min(Math.floor(layer / 10), MONSTER_CONFIG.length - 1)
   const baseMonster = MONSTER_CONFIG[monsterIndex] || { baseHp: 100, baseAttack: 10, baseDefense: 5 }
   
   const name = isBoss ? `试炼·第${layer}层·镇守BOSS` : `试炼·第${layer}层·妖兽`
-
   return {
     layer,
     name,
@@ -51,7 +109,7 @@ function calcDamage(atk, def, isCrit = false, critDamage = 1.5) {
 export function attackMonster() {
   const p = playerTotalAttribute.value
   const m = gameState.currentMonster
-  if (!m) return { type: 'none' }
+  if (!m || gameState.isPlayerDead) return { type: 'none' }
 
   const isCrit = randomChance(p.critRate)
   const dmg = calcDamage(p.attack, m.defense, isCrit, p.critDamage)
@@ -61,6 +119,9 @@ export function attackMonster() {
     damage: dmg,
     isCrit,
     monsterDead: false,
+    playerHurt: 0,
+    playerDodged: false,
+    playerDead: false,
     drop: null,
     reachKillNeed: false,
     levelUp: false
@@ -94,8 +155,8 @@ export function attackMonster() {
 
     const itemType = ['strengthenStone', 'upgradeStone', 'starStone'][randomInt(0, 2)]
     const itemCount = randomInt(1, 3)
+    gameState.items[itemType] = (Number(gameState.items[itemType]) || 0) + itemCount
     drop.items.push({ type: itemType, count: itemCount })
-    gameState.items[itemType] += itemCount
 
     if ((m.isElite || m.isRare) && randomChance(30 + p.dropRate * 100)) {
       const equipLevel = Math.max(1, Math.floor(m.maxHp / 50))
@@ -107,10 +168,28 @@ export function attackMonster() {
     res.drop = drop
     gameState.currentMonster = null
     saveGame()
-
     stopContinuousAttack()
+    return res
   }
 
+  const isDodge = randomChance(p.dodgeRate)
+  res.playerDodged = isDodge
+  if (!isDodge) {
+    const monsterDamage = calcDamage(m.attack, p.defense)
+    res.playerHurt = monsterDamage
+    gameState.currentHp = Math.max(0, gameState.currentHp - monsterDamage)
+    
+    if (gameState.currentHp <= 0) {
+      gameState.isPlayerDead = true
+      res.playerDead = true
+      gameState.autoBattle = false
+      gameState.isContinuousAttacking = false
+      gameState.currentMonster = null
+      stopContinuousAttack()
+    }
+  }
+
+  saveGame()
   return res
 }
 
@@ -169,11 +248,11 @@ const handleTrialReward = (monster) => {
   const strengthenStone = Math.floor(baseReward.strengthenStone * multiplier * (isBoss ? bossReward.strengthenStone : 1))
   const upgradeStone = Math.floor(baseReward.upgradeStone * multiplier * (isBoss ? bossReward.upgradeStone : 1))
   if (strengthenStone > 0) {
-    gameState.items.strengthenStone += strengthenStone
+    gameState.items.strengthenStone = (Number(gameState.items.strengthenStone) || 0) + strengthenStone
     reward.items.push({ type: 'strengthenStone', count: strengthenStone })
   }
   if (upgradeStone > 0) {
-    gameState.items.upgradeStone += upgradeStone
+    gameState.items.upgradeStone = (Number(gameState.items.upgradeStone) || 0) + upgradeStone
     reward.items.push({ type: 'upgradeStone', count: upgradeStone })
   }
 
@@ -195,46 +274,45 @@ export function stopContinuousAttack() {
 }
 
 export function startContinuousAttack(interval = 200) {
-  if (!gameState.currentMonster) {
-    return { success: false, msg: '暂无怪物目标，请先刷新怪物' }
+  if (!gameState.currentMonster || gameState.isPlayerDead) {
+    return { success: false, msg: gameState.isPlayerDead ? '你已死亡，请复活' : '暂无怪物目标' }
   }
   if (gameState.isContinuousAttacking) {
     return { success: false, msg: '已在连续攻击中' }
   }
   if (gameState.autoBattle) {
-    return { success: false, msg: '已开启全局自动打怪，无需手动连打' }
+    return { success: false, msg: '已开启全局自动打怪' }
   }
 
   gameState.isContinuousAttacking = true
-
   const attackLoop = () => {
-    if (!gameState.currentMonster || gameState.autoBattle || !gameState.isContinuousAttacking) {
+    if (!gameState.currentMonster || gameState.autoBattle || !gameState.isContinuousAttacking || gameState.isPlayerDead) {
       stopContinuousAttack()
       return
     }
-
     attackMonster()
-
     gameState.continuousAttackTimerId = setTimeout(attackLoop, interval)
   }
 
   attackMonster()
   gameState.continuousAttackTimerId = setTimeout(attackLoop, interval)
-
-  return { success: true, msg: '开始连续攻击，直至怪物死亡' }
+  return { success: true, msg: '开始连续攻击' }
 }
 
 export function toggleAutoBattle() {
+  if (gameState.isPlayerDead) {
+    return { success: false, msg: '你已死亡，无法开启自动打怪' }
+  }
   if (!gameState.autoBattle) {
     if (gameState.realmKillCount >= currentRealmKillNeed.value) {
-      return { success: false, msg: '当前境界击杀数已达标，无需继续打怪' }
+      return { success: false, msg: '当前境界击杀数已达标' }
     }
     const mapMonsters = MONSTER_CONFIG.filter(m => m.mapId === gameState.currentMapId)
     if (mapMonsters.length === 0) {
-      return { success: false, msg: '当前地图无怪物，无法开启自动打怪' }
+      return { success: false, msg: '当前地图无怪物' }
     }
-
     stopContinuousAttack()
+    gameState.autoMeditate = false
   }
 
   gameState.autoBattle = !gameState.autoBattle

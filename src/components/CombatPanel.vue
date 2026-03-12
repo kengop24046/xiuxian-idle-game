@@ -51,36 +51,24 @@
             <p class="text-yellow-400 font-semibold">x{{ currentMap.dropMultiplier }}</p>
           </div>
         </div>
-        <div v-if="currentMonster.traitDesc" class="bg-dark/30 rounded-lg p-2 mb-4">
-          <p class="text-light/70 text-xs">怪物特性：<span class="text-primary">{{ currentMonster.traitDesc }}</span></p>
-        </div>
       </div>
 
       <div v-else class="text-center py-8 text-light/60">
-        <p>暂无怪物，点击攻击按钮刷新怪物并开始战斗</p>
+        <p>暂无怪物，点击攻击按钮开始打怪</p>
       </div>
 
       <div class="flex flex-col md:flex-row gap-4">
         <button
           @click="handleAttack"
           class="flex-1 btn-primary text-xl py-4"
-          :disabled="isAttacking || autoBattle"
+          :disabled="isAttacking"
         >
-          {{ isAttacking ? '攻击中...' : '攻击怪物' }}
-        </button>
-
-        <button
-          @click="handleStopContinuousAttack"
-          class="btn-secondary text-xl py-4 bg-orange-500/20 border-orange-500 text-orange-400"
-          :disabled="!isContinuousAttacking"
-        >
-          停止攻击
+          攻击怪物
         </button>
         <button
           @click="handleToggleAutoBattle"
           class="btn-secondary text-xl py-4"
           :class="autoBattle ? 'bg-success/20 border-success text-success' : ''"
-          :disabled="isAttacking"
         >
           {{ autoBattle ? '关闭自动打怪' : '开启自动打怪' }}
         </button>
@@ -93,48 +81,56 @@
             v-for="(log, index) in combatLogs"
             :key="index"
             class="text-sm mb-1"
-            :class="log.type === 'player' ? 'text-blue-400' : log.type === 'monster' ? 'text-red-400' : log.type === 'drop' ? 'text-yellow-400' : log.type === 'levelUp' ? 'text-green-400' : 'text-light/60'"
+            :class="log.type === 'player' ? 'text-blue-400' : log.type === 'monster' ? 'text-red-400' : log.type === 'drop' ? 'text-yellow-400' : 'text-light/60'"
           >
             {{ log.content }}
           </p>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <h3 class="text-primary text-lg font-semibold mb-3">我的属性</h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">攻击力</p>
-          <p class="text-red-400 font-semibold">{{ formatNumber(playerAttr.attack) }}</p>
+      <div class="mt-6">
+        <h3 class="text-primary text-lg font-semibold mb-3">我的属性</h3>
+        <div class="bg-dark/30 rounded-lg p-3 mb-3">
+          <p class="text-light/80 text-sm mb-2">属性加成来源</p>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+            <p class="text-green-400">等级加成：Lv.{{ level }}</p>
+            <p class="text-blue-400">境界层数：{{ currentRealm.name }} {{ currentRealmLevel }}层</p>
+            <p class="text-purple-400">大境界加成：{{ ((bigRealmBonus.multiplier - 1) * 100).toFixed(0) }}% 全属性</p>
+          </div>
         </div>
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">防御力</p>
-          <p class="text-blue-400 font-semibold">{{ formatNumber(playerAttr.defense) }}</p>
-        </div>
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">暴击率</p>
-          <p class="text-orange-400 font-semibold">{{ playerAttr.critRate.toFixed(2) }}%</p>
-        </div>
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">闪避率</p>
-          <p class="text-green-400 font-semibold">{{ playerAttr.dodgeRate.toFixed(2) }}%</p>
-        </div>
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">暴击伤害</p>
-          <p class="text-red-500 font-semibold">{{ (playerAttr.critDamage * 100).toFixed(0) }}%</p>
-        </div>
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">修为加成</p>
-          <p class="text-primary font-semibold">+{{ ((playerAttr.expRate - 1) * 100).toFixed(2) }}%</p>
-        </div>
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">掉落加成</p>
-          <p class="text-yellow-400 font-semibold">+{{ (playerAttr.dropRate * 100).toFixed(2) }}%</p>
-        </div>
-        <div class="bg-dark/50 rounded-lg p-3">
-          <p class="text-light/70 text-xs">转生次数</p>
-          <p class="text-purple-400 font-semibold">{{ reincarnationCount }} 转</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">攻击力</p>
+            <p class="text-red-400 font-semibold">{{ formatNumber(playerAttr.attack) }}</p>
+          </div>
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">防御力</p>
+            <p class="text-blue-400 font-semibold">{{ formatNumber(playerAttr.defense) }}</p>
+          </div>
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">暴击率</p>
+            <p class="text-orange-400 font-semibold">{{ playerAttr.critRate.toFixed(2) }}%</p>
+          </div>
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">闪避率</p>
+            <p class="text-green-400 font-semibold">{{ playerAttr.dodgeRate.toFixed(2) }}%</p>
+          </div>
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">暴击伤害</p>
+            <p class="text-red-500 font-semibold">{{ (playerAttr.critDamage * 100).toFixed(0) }}%</p>
+          </div>
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">修为加成</p>
+            <p class="text-primary font-semibold">+{{ ((playerAttr.expRate - 1) * 100).toFixed(2) }}%</p>
+          </div>
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">掉落加成</p>
+            <p class="text-yellow-400 font-semibold">+{{ (playerAttr.dropRate * 100).toFixed(2) }}%</p>
+          </div>
+          <div class="bg-dark/50 rounded-lg p-3">
+            <p class="text-light/70 text-xs">转生次数</p>
+            <p class="text-purple-400 font-semibold">{{ reincarnationCount }} 转</p>
+          </div>
         </div>
       </div>
     </div>
@@ -143,8 +139,8 @@
 
 <script setup>
 import { ref, computed, onUnmounted, watch } from 'vue'
-import { attackMonster, toggleAutoBattle, generateMonster, startContinuousAttack, stopContinuousAttack } from '@/game/combat.js'
-import { gameState, currentMap, playerTotalAttribute } from '@/game/state.js'
+import { attackMonster, toggleAutoBattle, generateMonster } from '@/game/combat.js'
+import { gameState, currentMap, playerTotalAttribute, currentRealm, bigRealmBonus } from '@/game/state.js'
 import { formatNumber } from '@/game/utils.js'
 
 const tip = ref({ show: false, msg: '', type: '' })
@@ -154,92 +150,76 @@ let autoBattleTimer = null
 
 const currentMonster = computed(() => gameState.currentMonster)
 const autoBattle = computed(() => gameState.autoBattle)
-const isContinuousAttacking = computed(() => gameState.isContinuousAttacking)
-const reincarnationCount = computed(() => gameState.reincarnationCount)
 const playerAttr = computed(() => playerTotalAttribute.value)
 const monsterHpPercent = computed(() => {
   if (!currentMonster.value) return 0
-  return Math.max(0, (currentMonster.value.currentHp / currentMonster.value.maxHp) * 100)
+  return (currentMonster.value.currentHp / currentMonster.value.maxHp) * 100
 })
+
+const level = computed(() => gameState.level)
+const currentRealmLevel = computed(() => gameState.currentLevel)
+const reincarnationCount = computed(() => gameState.reincarnationCount)
 
 const showTip = (success, msg) => {
   tip.value = { show: true, msg, type: success ? 'success' : 'error' }
-  setTimeout(() => tip.value.show = false, 3000)
+  setTimeout(() => tip.value.show = false, 2000)
 }
 
 const addCombatLog = (type, content) => {
   combatLogs.value.unshift({ type, content })
-  if (combatLogs.value.length > 50) combatLogs.value.pop()
+  if (combatLogs.value.length > 30) combatLogs.value.pop()
 }
 
 const handleAttack = async () => {
-  if (isAttacking.value || autoBattle.value) return
+  if (isAttacking.value) return
   isAttacking.value = true
 
-  try {
+  while (true) {
     if (!currentMonster.value) {
-      const newMonster = generateMonster()
-      if (!newMonster) {
-        addCombatLog('system', '当前地图无怪物，请切换地图')
-        showTip(false, '当前地图无怪物')
-        isAttacking.value = false
-        return
+      const mon = generateMonster()
+      if (!mon) {
+        addCombatLog('system', '此地图没有怪物')
+        break
       }
-      gameState.currentMonster = newMonster
-      addCombatLog('system', `遭遇了【${newMonster.name}】！`)
+      gameState.currentMonster = mon
+      addCombatLog('system', '遇到了 ' + mon.name)
     }
 
-    const res = startContinuousAttack(200)
-    if (res.success) {
-      showTip(true, res.msg)
-    } else {
-      showTip(false, res.msg)
+    const mon = currentMonster.value
+    const res = attackMonster()
+
+    if (res.damage) {
+      addCombatLog('player', `造成 ${formatNumber(res.damage)} 点伤害`)
     }
-  } catch (e) {
-    console.error('攻击失败：', e)
-    addCombatLog('system', '攻击异常，请重试')
-    showTip(false, '攻击异常')
-  } finally {
-    isAttacking.value = false
+    if (res.monsterDead) {
+      addCombatLog('system', '击杀 ' + mon.name)
+      if (res.reachKillNeed) {
+        showTip(true, '击杀数达标，自动停止')
+        gameState.autoBattle = false
+      }
+      break
+    }
+    await new Promise(r => setTimeout(r, 250))
   }
-}
 
-const handleStopContinuousAttack = () => {
-  stopContinuousAttack()
-  showTip(true, '已停止连续攻击')
-  addCombatLog('system', '手动停止连续攻击')
+  isAttacking.value = false
 }
 
 const handleToggleAutoBattle = () => {
   const res = toggleAutoBattle()
   showTip(res.success, res.msg)
-  if (res.success) {
-    addCombatLog('system', res.msg)
-  }
 }
 
-const startGlobalAutoBattle = () => {
-  if (autoBattleTimer) clearInterval(autoBattleTimer)
-  autoBattleTimer = setInterval(() => {
-    if (!isAttacking.value && autoBattle.value) {
-      handleAttack()
-    }
-  }, 500)
-}
-
-const stopGlobalAutoBattle = () => {
-  if (autoBattleTimer) {
+watch(autoBattle, (val) => {
+  if (val) {
+    autoBattleTimer = setInterval(() => {
+      if (!isAttacking.value) handleAttack()
+    }, 300)
+  } else {
     clearInterval(autoBattleTimer)
     autoBattleTimer = null
   }
-}
-
-watch(autoBattle, (newVal) => {
-  newVal ? startGlobalAutoBattle() : stopGlobalAutoBattle()
 }, { immediate: true })
 
-onUnmounted(() => {
-  stopGlobalAutoBattle()
-  stopContinuousAttack()
-})
+onUnmounted(() => clearInterval(autoBattleTimer))
 </script>
