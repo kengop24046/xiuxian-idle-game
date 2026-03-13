@@ -16,6 +16,11 @@
       <AchievementPanel v-else-if="activeTab === 'achievement'" />
       <SignInPanel v-else-if="activeTab === 'signin'" />
       <PillPanel v-else-if="activeTab === 'pill'" />
+      <SkillPanel v-else-if="activeTab === 'skill'" />
+      <SectPanel v-else-if="activeTab === 'sect'" />
+      <CavePanel v-else-if="activeTab === 'cave'" />
+      <RootPanel v-else-if="activeTab === 'root'" />
+      <SecretPanel v-else-if="activeTab === 'secret'" />
     </main>
     <TabBar v-model:activeTab="activeTab" />
   </div>
@@ -39,6 +44,11 @@ import IllustrationPanel from '@/components/IllustrationPanel.vue'
 import AchievementPanel from '@/components/AchievementPanel.vue'
 import SignInPanel from '@/components/SignInPanel.vue'
 import PillPanel from '@/components/PillPanel.vue'
+import SkillPanel from '@/components/SkillPanel.vue'
+import SectPanel from '@/components/SectPanel.vue'
+import CavePanel from '@/components/CavePanel.vue'
+import RootPanel from '@/components/RootPanel.vue'
+import SecretPanel from '@/components/SecretPanel.vue'
 import { initShop } from '@/game/shop.js'
 
 const activeTab = ref('cultivation')

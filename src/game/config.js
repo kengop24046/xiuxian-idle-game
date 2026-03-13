@@ -856,3 +856,59 @@ export const PILL_CONFIG = {
     stackLimit: 99,
   },
 }
+
+export const SKILL_CONFIG = {
+  passive: [
+    { id: 1, name: '吸血心法', type: 'passive', desc: '攻击时恢复5%伤害的气血', lv1: 0.05, lvMax: 10, upgradeCost: { strengthenStone: 10 }, effect: 'lifesteal' },
+    { id: 2, name: '金刚诀', type: 'passive', desc: '防御提升10%', lv1: 0.1, lvMax: 10, upgradeCost: { strengthenStone: 15 }, effect: 'defenseBoost' },
+    { id: 3, name: '身法诀', type: 'passive', desc: '闪避率提升8%', lv1: 0.08, lvMax: 10, upgradeCost: { strengthenStone: 12 }, effect: 'dodgeBoost' },
+    { id: 4, name: '暴击心法', type: 'passive', desc: '暴击率提升6%', lv1: 0.06, lvMax: 10, upgradeCost: { strengthenStone: 20 }, effect: 'critBoost' },
+  ],
+  active: [
+    { id: 1, name: '群攻剑诀', type: 'active', desc: '一次性攻击3次', cd: 8000, effect: 'multiAttack', param: 3 },
+    { id: 2, name: '护盾术', type: 'active', desc: '抵挡一次怪物攻击', cd: 10000, effect: 'shield' },
+    { id: 3, name: '暴击诀', type: 'active', desc: '5秒内暴击率翻倍', cd: 12000, effect: 'critBoostActive', duration: 5000 },
+  ]
+}
+
+export const SECT_CONFIG = [
+  { id: 1, name: '青云剑派', type: 'attack', unlockRealm: 3, bonus: { attack: 0.2 }, skills: [1,3], tasks: [{ type: 'kill', target: 50, reward: { sectContrib: 20 } }] },
+  { id: 2, name: '丹鼎门', type: 'pill', unlockRealm: 4, bonus: { pillRate: 0.3 }, skills: [2,4], tasks: [{ type: 'item', target: 10, reward: { sectContrib: 25 } }] },
+  { id: 3, name: '金刚宗', type: 'defense', unlockRealm: 5, bonus: { defense: 0.25 }, skills: [2,3], tasks: [{ type: 'kill', target: 80, reward: { sectContrib: 30 } }] },
+]
+
+export const SECT_TYPE_MAP = {
+  attack: '攻击',
+  pill: '丹药',
+  defense: '防御'
+}
+
+export const SECT_RANK = ['外门弟子', '内门弟子', '核心弟子', '长老', '掌门']
+
+export const CAVE_CONFIG = {
+  spiritArray: { lv1: 1.1, maxLv: 10, cost: { strengthenStone: 20 } },
+  spiritField: { plants: [{ name: '灵草', time: 300000, reward: { expPill: 1 } }] },
+  refineStove: { lv1: 1, maxLv: 10, cost: { upgradeStone: 25 } },
+  pillStove: { lv1: 1, maxLv: 10, cost: { starStone: 30 } }
+}
+
+export const ROOT_CONFIG = [
+  { grade: '凡根', rate: 1.0, attr: 1.0 },
+  { grade: '灵根', rate: 1.3, attr: 1.2 },
+  { grade: '仙根', rate: 1.8, attr: 1.5 },
+  { grade: '神根', rate: 2.5, attr: 2.0 }
+]
+export const MERIDIAN_CONFIG = {
+  nodes: 20, nodeCost: { starStone: 15 }, totalBonus: { allAttr: 0.5 }
+}
+
+export const SECRET_CONFIG = {
+  unlockKill: 100, rewardMulti: 3, events: [
+    { name: '仙人赠礼', chance: 5, effect: 'gift' },
+    { name: '心魔考验', chance: 3, effect: 'test' },
+    { name: '秘境入口', chance: 2, effect: 'secret' },
+  ]
+}
+
+export const LEVEL_UP_ATTR = { power: 2, constitution: 2, agility: 1, comprehension: 1, luck: 1 }
+export const REALM_UP_ATTR = { power: 5, constitution: 5, agility: 3, comprehension: 3, luck: 2 }

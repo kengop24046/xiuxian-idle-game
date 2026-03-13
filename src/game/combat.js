@@ -1,5 +1,5 @@
 import { gameState, currentMap, playerTotalAttribute, saveGame, currentRealmExpNeed, currentRealmKillNeed, addLevelExp, playerMaxHp, playerRevive } from './state.js'
-import { MONSTER_CONFIG, TRIAL_CONFIG, MAP_CONFIG, EQUIPMENT_CONFIG, MONSTER_STRENGTH_CONFIG, EQUIPMENT_SET_CONFIG, PILL_CONFIG } from './config.js'
+import { MONSTER_CONFIG, TRIAL_CONFIG, MAP_CONFIG, EQUIPMENT_CONFIG, MONSTER_STRENGTH_CONFIG, EQUIPMENT_SET_CONFIG, PILL_CONFIG, SKILL_CONFIG, SECRET_CONFIG, SECT_CONFIG } from './config.js'
 import { randomInt, randomChance, generateEquipment } from './utils.js'
 
 export function generateMonster() {
@@ -35,12 +35,35 @@ export function generateMonster() {
   let totalBaseMulti = mapBaseMulti * realmBaseMulti * levelBaseMulti * reincarnationBaseMulti
   totalBaseMulti = Math.min(totalBaseMulti, maxMultiplier)
 
+  if (randomChance(5)) {
+    const randomEvent = SECRET_CONFIG.events[randomInt(0, SECRET_CONFIG.events.length - 1)]
+    if (randomEvent.effect === 'gift') {
+      gameState.gold += 1000
+      gameState.items.strengthenStone += 5
+      saveGame()
+    }
+    if (randomEvent.effect === 'test') {
+      gameState.heartDevilTest = true
+      saveGame()
+    }
+    if (randomEvent.effect === 'secret') {
+      gameState.secret.available = true
+      saveGame()
+    }
+  }
+
+  gameState.secret.unlockCount++
+  if (gameState.secret.unlockCount >= SECRET_CONFIG.unlockKill) {
+    gameState.secret.available = true
+    gameState.secret.unlockCount = 0
+    saveGame()
+  }
+
   if (rareMonsters.length > 0 && randomChance(rareRate)) {
     const targetMonster = rareMonsters[randomInt(0, rareMonsters.length - 1)]
     const finalMulti = totalBaseMulti * rareBonus.hp
     const attackMulti = totalBaseMulti * rareBonus.attack
     const defenseMulti = totalBaseMulti * rareBonus.defense
-
     return {
       ...targetMonster,
       isRare: true,
@@ -60,7 +83,6 @@ export function generateMonster() {
     const finalMulti = totalBaseMulti * eliteBonus.hp
     const attackMulti = totalBaseMulti * eliteBonus.attack
     const defenseMulti = totalBaseMulti * eliteBonus.defense
-
     return {
       ...targetMonster,
       isElite: true,
@@ -117,13 +139,40 @@ export function attackMonster() {
   const m = gameState.currentMonster
   if (!m || gameState.isPlayerDead) return { type: 'none' }
 
-  const isCrit = randomChance(p.critRate)
-  const dmg = calcDamage(p.attack, m.defense, isCrit, p.critDamage)
-  m.currentHp -= dmg
+  let totalDmg = 0
+  let attackTimes = 1
+  let finalCritRate = p.critRate
+  const activeSkillId = gameState.skills.equippedActive
+  const activeSkill = activeSkillId ? SKILL_CONFIG.active.find(s => s.id === activeSkillId) : null
+
+  if (activeSkill && activeSkill.effect === 'multiAttack') {
+    attackTimes = activeSkill.param
+  }
+  if (activeSkill && activeSkill.effect === 'critBoostActive' && gameState.skills.cd[activeSkillId] > Date.now()) {
+    finalCritRate = p.critRate * 2
+  }
+  if (activeSkill && activeSkill.effect === 'shield') {
+    gameState.shield = 1
+  }
+  gameState.skills.equippedActive = null
+
+  let isCritFlag = false
+  for (let i = 0; i < attackTimes; i++) {
+    const isCrit = randomChance(finalCritRate)
+    if (isCrit) isCritFlag = true
+    const dmg = calcDamage(p.attack, m.defense, isCrit, p.critDamage)
+    m.currentHp -= dmg
+    totalDmg += dmg
+
+    if (p.lifesteal > 0) {
+      const healHp = Math.floor(dmg * p.lifesteal)
+      gameState.currentHp = Math.min(gameState.currentHp + healHp, playerMaxHp.value)
+    }
+  }
 
   const res = {
-    damage: dmg,
-    isCrit,
+    damage: totalDmg,
+    isCrit: isCritFlag,
     monsterDead: false,
     playerHurt: 0,
     playerDodged: false,
@@ -131,7 +180,8 @@ export function attackMonster() {
     drop: null,
     reachKillNeed: false,
     levelUp: false,
-    newMonster: null
+    newMonster: null,
+    heartDevilTest: gameState.heartDevilTest || false
   }
 
   if (m.currentHp <= 0) {
@@ -144,6 +194,13 @@ export function attackMonster() {
     }
     if (m.isElite) gameState.eliteKillCount++
     if (m.isRare) gameState.rareKillCount++
+
+    if (gameState.sect.id !== 0 && gameState.sect.dailyTask?.type === 'kill') {
+      gameState.sect.taskProgress = Math.min(
+        gameState.sect.taskProgress + 1,
+        gameState.sect.dailyTask.target
+      )
+    }
 
     const levelExpGained = Math.floor(m.exp / 5)
     const isLevelUp = addLevelExp(levelExpGained)
@@ -234,7 +291,7 @@ export function attackMonster() {
     }
 
     res.drop = drop
-
+    gameState.heartDevilTest = false
     const newMonster = generateMonster()
     gameState.currentMonster = newMonster
     res.newMonster = newMonster
@@ -246,7 +303,11 @@ export function attackMonster() {
 
   const isDodge = randomChance(p.dodgeRate)
   res.playerDodged = isDodge
-  if (!isDodge) {
+
+  if (gameState.shield > 0) {
+    gameState.shield--
+    res.playerDodged = true
+  } else if (!isDodge) {
     const monsterDamage = calcDamage(m.attack, p.defense)
     res.playerHurt = monsterDamage
     gameState.currentHp = Math.max(0, gameState.currentHp - monsterDamage)
