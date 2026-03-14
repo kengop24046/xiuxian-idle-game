@@ -3,7 +3,6 @@
     <div v-if="tip.show" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg" :class="tip.type === 'success' ? 'bg-success text-white' : 'bg-danger text-white'">
       {{ tip.msg }}
     </div>
-
     <div class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">野外打怪</h2>
       
@@ -11,15 +10,14 @@
         <div class="flex justify-between items-center">
           <div>
             <p class="text-light/70 text-sm">当前地图</p>
-            <p class="text-primary font-semibold">{{ currentMap.name }}</p>
+            <p class="text-primary font-semibold">{{ currentMap?.name || '未知地图' }}</p>
           </div>
           <button @click="$emit('update:activeTab', 'map')" class="btn-secondary text-sm">
             切换地图
           </button>
         </div>
-        <p class="text-light/60 text-xs mt-1">{{ currentMap.desc }}</p>
+        <p class="text-light/60 text-xs mt-1">{{ currentMap?.desc || '' }}</p>
       </div>
-
       <div v-if="currentMonster" class="mb-6">
         <div class="flex justify-between items-center mb-2">
           <h3 class="text-xl font-bold" :class="currentMonster.isElite ? 'text-red-500' : currentMonster.isRare ? 'text-purple-400' : 'text-light'">
@@ -48,15 +46,24 @@
           </div>
           <div class="bg-dark/30 rounded p-2 text-center">
             <p class="text-light/60 text-xs">掉落倍率</p>
-            <p class="text-yellow-400 font-semibold">x{{ currentMap.dropMultiplier }}</p>
+            <p class="text-yellow-400 font-semibold">x{{ currentMap?.dropMultiplier || 1 }}</p>
           </div>
         </div>
       </div>
-
       <div v-else class="text-center py-8 text-light/60">
         <p>{{ isPlayerDead ? '你已死亡，请复活后再战' : '当前地图暂无怪物，请切换地图' }}</p>
       </div>
-
+      <div class="flex gap-2 mb-4">
+        <button
+          v-for="speed in BATTLE_SPEED_CONFIG"
+          :key="speed"
+          class="btn-secondary flex-1"
+          :class="gameState.battleSpeed === speed ? 'bg-primary/20 border-primary text-primary' : ''"
+          @click="setBattleSpeed(speed)"
+        >
+          {{ speed }}x
+        </button>
+      </div>
       <div class="flex flex-col md:flex-row gap-4">
         <button
           @click="handleAttack"
@@ -74,7 +81,6 @@
           {{ autoBattle ? '关闭自动打怪' : '开启自动打怪' }}
         </button>
       </div>
-
       <div class="mt-4">
         <h4 class="text-light/80 font-semibold mb-2">战斗记录</h4>
         <div class="bg-dark/50 rounded-lg p-3 max-h-40 overflow-y-auto">
@@ -82,14 +88,13 @@
             v-for="(log, index) in combatLogs"
             :key="index"
             class="text-sm mb-1"
-            :class="log.type === 'player' ? 'text-blue-400' : log.type === 'monster' ? 'text-red-400' : log.type === 'drop' ? 'text-yellow-400' : 'text-light/60'"
+            :class="log.type === 'player' ? 'text-blue-400' : log.type === 'monster' ? 'text-red-400' : log.type === 'drop' ? 'text-yellow-400' : log.type === 'skill' ? 'text-purple-400' : 'text-light/60'"
           >
             {{ log.content }}
           </p>
         </div>
       </div>
     </div>
-
     <div v-if="selectedEquipment" class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">装备详情</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -206,7 +211,6 @@
         </div>
       </div>
     </div>
-
     <div class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">背包装备</h2>
       <div v-if="bagEquipments.length === 0" class="text-center py-8 text-light/60">
@@ -232,13 +236,12 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { wearEquipment, unwearEquipment, decomposeEquipment, strengthenEquipment, upgradeEquipment, starUpEquipment, calculateEquipmentAttr } from '@/game/equipment.js'
-import { attackMonster, toggleAutoBattle, generateMonster, startContinuousAttack } from '@/game/combat.js'
-import { gameState, currentMap, playerTotalAttribute } from '@/game/state.js'
-import { EQUIPMENT_CONFIG } from '@/game/config.js'
+import { attackMonster, toggleAutoBattle, generateMonster, startContinuousAttack, stopContinuousAttack } from '@/game/combat.js'
+import { gameState, currentMap, playerTotalAttribute, setBattleSpeed, autoCastActiveSkill } from '@/game/state.js'
+import { EQUIPMENT_CONFIG, BATTLE_SPEED_CONFIG } from '@/game/config.js'
 import { formatNumber } from '@/game/utils.js'
 
 const attrNameMap = {
@@ -252,14 +255,14 @@ const combatLogs = ref([])
 const selectedEquipment = ref(null)
 let autoBattleTimer = null
 
-const equippedEquipments = computed(() => gameState.equippedEquipments)
-const bagEquipments = computed(() => gameState.bagEquipments)
-const currentMonster = computed(() => gameState.currentMonster)
-const autoBattle = computed(() => gameState.autoBattle)
-const isPlayerDead = computed(() => gameState.isPlayerDead)
-const strengthenStone = computed(() => Number(gameState.items.strengthenStone) || 0)
-const upgradeStone = computed(() => Number(gameState.items.upgradeStone) || 0)
-const starStone = computed(() => Number(gameState.items.starStone) || 0)
+const equippedEquipments = computed(() => gameState?.equippedEquipments || {})
+const bagEquipments = computed(() => gameState?.bagEquipments || [])
+const currentMonster = computed(() => gameState?.currentMonster || null)
+const autoBattle = computed(() => gameState?.autoBattle || false)
+const isPlayerDead = computed(() => gameState?.isPlayerDead || false)
+const strengthenStone = computed(() => Number(gameState?.items?.strengthenStone) || 0)
+const upgradeStone = computed(() => Number(gameState?.items?.upgradeStone) || 0)
+const starStone = computed(() => Number(gameState?.items?.starStone) || 0)
 
 const monsterHpPercent = computed(() => {
   if (!currentMonster.value) return 0
@@ -276,13 +279,13 @@ onMounted(() => {
   }
 })
 
-watch(() => gameState.currentMapId, () => {
+watch(() => gameState?.currentMapId, () => {
   if (isPlayerDead.value) return
   const newMonster = generateMonster()
   if (newMonster) {
     gameState.currentMonster = newMonster
     combatLogs.value = []
-    addCombatLog('system', `进入【${currentMap.value.name}】，遭遇了【${newMonster.name}】！`)
+    addCombatLog('system', `进入【${currentMap.value?.name || '未知地图'}】，遭遇了【${newMonster.name}】！`)
   }
 })
 
@@ -362,38 +365,59 @@ const handleAttack = async () => {
   if (isAttacking.value || !currentMonster.value || isPlayerDead.value) return
   isAttacking.value = true
 
-  while (currentMonster.value && !isPlayerDead.value && !autoBattle.value) {
+  const targetMonster = currentMonster.value
+  const monsterName = targetMonster.name
+
+  while (
+    currentMonster.value && 
+    currentMonster.value.id === targetMonster.id && 
+    !isPlayerDead.value && 
+    !autoBattle.value
+  ) {
+    const skillResult = autoCastActiveSkill()
+    if (skillResult?.success && skillResult?.skill) {
+      addCombatLog('skill', `你释放了【${skillResult.skill.name}】！`)
+    }
+
     const res = attackMonster()
-    if (res.type === 'none') break
+    if (!res || res.type === 'none') break
 
     if (res.damage) {
-      addCombatLog('player', `你对${currentMonster.value.name}造成${formatNumber(res.damage)}点伤害${res.isCrit ? '（暴击！）' : ''}`)
+      addCombatLog('player', `你对${monsterName}造成${formatNumber(res.damage)}点伤害${res.isCrit ? '（暴击！）' : ''}`)
     }
+
     if (res.playerHurt > 0) {
-      addCombatLog('monster', `${currentMonster.value.name}对你造成${formatNumber(res.playerHurt)}点伤害`)
+      addCombatLog('monster', `${monsterName}对你造成${formatNumber(res.playerHurt)}点伤害`)
     } else if (res.playerDodged) {
-      addCombatLog('system', `你闪避了${currentMonster.value.name}的攻击！`)
+      addCombatLog('system', `你闪避了${monsterName}的攻击！`)
     }
+
     if (res.playerDead) {
       addCombatLog('monster', '你被怪物击杀了！')
       showTip(false, '你已死亡，请复活')
       break
     }
+
     if (res.monsterDead) {
-      addCombatLog('system', `你击杀了${res.drop.gold}金币，获得${formatNumber(res.drop.exp)}修为！`)
-      res.drop.items.forEach(item => {
-        addCombatLog('drop', `获得${item.type === 'strengthenStone' ? '强化石' : item.type === 'upgradeStone' ? '升级石' : '升星石'} x${item.count}`)
+      addCombatLog('system', `你击杀了【${monsterName}】，获得${formatNumber(res.drop?.gold || 0)}金币、${formatNumber(res.drop?.exp || 0)}修为！`)
+      
+      res.drop?.items?.forEach?.(item => {
+        const itemName = item.type === 'strengthenStone' ? '强化石' : item.type === 'upgradeStone' ? '升级石' : '升星石'
+        addCombatLog('drop', `获得${itemName} x${item.count}`)
       })
-      if (res.drop.equipment) {
+
+      if (res.drop?.equipment?.name) {
         addCombatLog('drop', `获得装备【${res.drop.equipment.name}】！`)
       }
+
       if (res.reachKillNeed) {
         showTip(true, '击杀数已达标，可突破境界')
       }
       break
     }
 
-    await new Promise(r => setTimeout(r, 200))
+    const attackInterval = 200 / (gameState?.battleSpeed || 1)
+    await new Promise(r => setTimeout(r, attackInterval))
   }
 
   isAttacking.value = false
@@ -403,7 +427,6 @@ const handleToggleAutoBattle = () => {
   const res = toggleAutoBattle()
   showTip(res.success, res.msg)
   if (!res.success) return
-
   if (res.success && gameState.autoBattle) {
     addCombatLog('system', '开启自动打怪模式')
   } else {
@@ -412,15 +435,16 @@ const handleToggleAutoBattle = () => {
 }
 
 watch(autoBattle, (val) => {
-  if (val) {
-    autoBattleTimer = setInterval(() => {
-      if (!isAttacking.value && !isPlayerDead.value) {
-        handleAttack()
-      }
-    }, 300)
-  } else {
+  if (autoBattleTimer) {
     clearInterval(autoBattleTimer)
     autoBattleTimer = null
+  }
+  if (val) {
+    autoBattleTimer = setInterval(() => {
+      if (!isAttacking.value && !isPlayerDead.value && currentMonster.value) {
+        handleAttack()
+      }
+    }, 300 / (gameState?.battleSpeed || 1))
   }
 }, { immediate: true })
 
@@ -449,52 +473,56 @@ const handleUnwearEquipment = () => {
 const handleDecomposeEquipment = () => {
   if (!selectedEquipment.value) return
   const result = decomposeEquipment(selectedEquipment.value.id)
-  if (result.success) {
+  if (result?.success) {
     let rewardMsg = '分解成功，获得'
-    if (result.reward.strengthenStone > 0) rewardMsg += `强化石x${result.reward.strengthenStone} `
-    if (result.reward.upgradeStone > 0) rewardMsg += `升级石x${result.reward.upgradeStone} `
-    if (result.reward.starStone > 0) rewardMsg += `升星石x${result.reward.starStone}`
+    if (result.reward?.strengthenStone > 0) rewardMsg += `强化石x${result.reward.strengthenStone} `
+    if (result.reward?.upgradeStone > 0) rewardMsg += `升级石x${result.reward.upgradeStone} `
+    if (result.reward?.starStone > 0) rewardMsg += `升星石x${result.reward.starStone}`
     showTip(true, rewardMsg)
     selectedEquipment.value = null
   } else {
-    showTip(false, result.msg)
+    showTip(false, result?.msg || '分解失败')
   }
 }
 
 const handleStrengthenEquipment = () => {
   if (!selectedEquipment.value) return
   const result = strengthenEquipment(selectedEquipment.value)
-  if (result.success) {
+  if (result?.success) {
     showTip(true, `强化成功！强化等级+${result.newLevel}`)
     selectEquipment(result.updatedEquipment)
   } else {
-    showTip(false, result.msg)
+    showTip(false, result?.msg || '强化失败')
   }
 }
 
 const handleUpgradeEquipment = () => {
   if (!selectedEquipment.value) return
   const result = upgradeEquipment(selectedEquipment.value)
-  if (result.success) {
+  if (result?.success) {
     showTip(true, `升级成功！装备等级提升至${result.newLevel}级`)
     selectEquipment(result.updatedEquipment)
   } else {
-    showTip(false, result.msg)
+    showTip(false, result?.msg || '升级失败')
   }
 }
 
 const handleStarUpEquipment = () => {
   if (!selectedEquipment.value) return
   const result = starUpEquipment(selectedEquipment.value)
-  if (result.success) {
+  if (result?.success) {
     showTip(true, `升星成功！装备星级提升至${result.newStar}星`)
     selectEquipment(result.updatedEquipment)
   } else {
-    showTip(false, result.msg)
+    showTip(false, result?.msg || '升星失败')
   }
 }
 
 onUnmounted(() => {
-  clearInterval(autoBattleTimer)
+  if (autoBattleTimer) {
+    clearInterval(autoBattleTimer)
+    autoBattleTimer = null
+  }
+  stopContinuousAttack()
 })
 </script>

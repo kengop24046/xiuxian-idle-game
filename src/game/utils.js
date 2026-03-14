@@ -21,15 +21,21 @@ export const randomChance = (rate) => {
   return Math.random() * 100 <= rate
 }
 
+export function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
 export function generateEquipment(level, minQuality = 1, maxQuality = 5, multiplier = 1) {
   level = Math.max(1, Number(level) || 1)
-  minQuality = Math.max(1, Math.min(Number(minQuality) || 1, EQUIPMENT_CONFIG.qualityList.length))
-  maxQuality = Math.max(minQuality, Math.min(Number(maxQuality) || 5, EQUIPMENT_CONFIG.qualityList.length))
+  minQuality = Math.max(1, Math.min(Number(minQuality) || 1, EQUIPMENT_CONFIG.quality.length))
+  maxQuality = Math.max(minQuality, Math.min(Number(maxQuality) || 5, EQUIPMENT_CONFIG.quality.length))
   multiplier = Math.max(1, Number(multiplier) || 1)
-
   const parts = EQUIPMENT_CONFIG.parts
   const randomPart = parts[randomInt(0, parts.length - 1)]
-
   const qualityWeights = {
     1: 100,
     2: 80,
@@ -44,7 +50,6 @@ export function generateEquipment(level, minQuality = 1, maxQuality = 5, multipl
     totalWeight += qualityWeights[q]
     validQualities.push({ quality: q, weight: qualityWeights[q] })
   }
-
   let randomNum = randomInt(1, totalWeight)
   let currentWeight = 0
   let selectedQuality = minQuality
@@ -55,15 +60,13 @@ export function generateEquipment(level, minQuality = 1, maxQuality = 5, multipl
       break
     }
   }
-  const qualityInfo = EQUIPMENT_CONFIG.qualityList[selectedQuality - 1]
-
-  const baseAttrMulti = level * multiplier * qualityInfo.attrMultiplier
+  const qualityInfo = EQUIPMENT_CONFIG.quality[selectedQuality - 1]
+  const baseAttrMulti = level * multiplier * qualityInfo.baseMultiplier
   const basePower = Math.floor(randomInt(1, 3) * baseAttrMulti)
   const baseConstitution = Math.floor(randomInt(1, 3) * baseAttrMulti)
   const baseAgility = Math.floor(randomInt(1, 3) * baseAttrMulti)
   const baseComprehension = Math.floor(randomInt(0, 2) * baseAttrMulti)
   const baseLuck = Math.floor(randomInt(0, 2) * baseAttrMulti)
-
   let baseAttack = 0
   let baseHp = 0
   let baseDefense = 0
@@ -77,11 +80,9 @@ export function generateEquipment(level, minQuality = 1, maxQuality = 5, multipl
     baseHp = Math.floor(randomInt(5, 10) * baseAttrMulti)
     baseDefense = Math.floor(randomInt(1, 2) * baseAttrMulti)
   }
-
   const prefixList = ['破损的', '普通的', '精良的', '优质的', '史诗的', '传说的', '逆天的']
   const prefix = prefixList[Math.min(selectedQuality, prefixList.length - 1)]
   const equipName = `${prefix}${randomPart.name}`
-
   return {
     id: Date.now() + '-' + randomInt(1000, 9999),
     name: equipName,
@@ -102,60 +103,41 @@ export function generateEquipment(level, minQuality = 1, maxQuality = 5, multipl
     constitution: baseConstitution,
     agility: baseAgility,
     comprehension: baseComprehension,
-    luck: baseLuck,
+    luck: baseLuck
   }
 }
 
-export const exportSave = () => {
-  try {
-    const saveData = JSON.stringify(gameState)
-    const blob = new Blob([saveData], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `修仙挂机录_存档_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    return true
-  } catch (e) {
-    console.error('导出存档失败', e)
-    return false
+export function exportSave(gameState) {
+  const saveData = JSON.parse(JSON.stringify({
+    ...gameState,
+    continuousAttackTimerId: null,
+    isContinuousAttacking: false
+  }))
+
+  const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `xiuxian-save-${new Date().toLocaleDateString()}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  return true
+}
+
+export async function importSave(file, gameState) {
+  if (!file.name.endsWith('.json')) {
+    throw new Error('请选择JSON格式的存档文件')
   }
-}
 
-export const importSave = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const saveData = JSON.parse(e.target.result)
-        if (!saveData.currentRealmId || saveData.gold === undefined) {
-          reject(new Error('存档格式错误'))
-          return
-        }
-        Object.assign(gameState, saveData)
-        localStorage.setItem('xianxia_game_save', JSON.stringify(gameState))
-        resolve(true)
-      } catch (err) {
-        reject(new Error('存档解析失败'))
-      }
-    }
-    reader.onerror = () => reject(new Error('文件读取失败'))
-    reader.readAsText(file)
-  })
-}
+  const text = await file.text()
+  const parsedData = JSON.parse(text)
 
-export const checkMapUnlocked = (map) => {
-  const playerRealmId = gameState.currentRealmId
-  const playerLevel = gameState.currentLevel
-  if (playerRealmId > map.unlockRealmId) return true
-  if (playerRealmId === map.unlockRealmId && playerLevel >= map.unlockLevel) return true
-  return false
-}
+  if (!parsedData.currentRealmId || parsedData.gold === undefined) {
+    throw new Error('无效的存档文件，缺少核心数据')
+  }
 
-export const checkRealmBreakable = () => {
-  const { currentExp, realmKillCount } = gameState
-  const expNeed = currentRealmExpNeed.value
-  const killNeed = currentRealmKillNeed.value
-  return currentExp >= expNeed && realmKillCount >= killNeed
+  Object.assign(gameState, parsedData)
+  return true
 }

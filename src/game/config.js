@@ -14,7 +14,6 @@ export const REALM_CONFIG = [
   { id: 13, name: '大罗金仙境', maxLevel: 10, baseExp: 5000000000, baseKillNeed: 25000, attributePoint: 1, bigRealmPoint: 10 },
   { id: 14, name: '道祖境', maxLevel: 10, baseExp: 100000000000, baseKillNeed: 35000, attributePoint: 1, bigRealmPoint: 10 },
 ]
-
 export const ATTRIBUTE_CONFIG = {
   power: { name: '力量', desc: '每点增加2点攻击力' },
   constitution: { name: '体质', desc: '每点增加10点气血、1点防御力' },
@@ -22,7 +21,6 @@ export const ATTRIBUTE_CONFIG = {
   comprehension: { name: '悟性', desc: '每点增加0.5%修为获取速度' },
   luck: { name: '福缘', desc: '每点增加0.2%掉落概率、0.5%暴击伤害' },
 }
-
 export const EQUIPMENT_CONFIG = {
   parts: [
     { id: 'weapon', name: '武器', mainAttr: 'attack' },
@@ -66,7 +64,6 @@ export const EQUIPMENT_CONFIG = {
     attrMultiplier: 0.15,
   },
 }
-
 export const MAP_CONFIG = [
   {
     id: 1,
@@ -308,7 +305,6 @@ export const MAP_CONFIG = [
     equipQualityMin: 4,
   },
 ]
-
 export const MONSTER_CONFIG = [
   // 青竹山怪物
   { monsterId: 1, id: 1, name: '青竹蛇', mapId: 1, baseHp: 50, baseAttack: 5, baseDefense: 1, baseGold: 5, baseExp: 10 },
@@ -446,7 +442,6 @@ export const TRIAL_CONFIG = {
     equipQualityMin: 4,
   }
 }
-
 // 商店配置
 export const SHOP_CONFIG = {
   refreshCost: 1000,
@@ -466,7 +461,6 @@ export const SHOP_CONFIG = {
     { id: 12, name: '仙品装备宝箱', type: 'equipBox', price: 500000, desc: '开启后获得一件极品~仙品装备', qualityMin: 4, qualityMax: 6, limit: 5, refreshRate: 1 },
   ]
 }
-
 // 转生配置
 export const REINCARNATION_CONFIG = {
   unlockRealmId: 9,
@@ -480,16 +474,6 @@ export const REINCARNATION_CONFIG = {
   },
   extraAttributePoint: 20,
 }
-
-// 道具配置
-export const ITEM_CONFIG = {
-  strengthenStone: { name: '初级强化石', desc: '装备强化所需材料' },
-  upgradeStone: { name: '初级升级石', desc: '装备升级所需材料' },
-  starStone: { name: '初级升星石', desc: '装备升星所需材料' },
-  resetPill: { name: '洗点水', desc: '重置所有属性点，重新分配' },
-  expPill: { name: '修为丹', desc: '使用后获得大量修为' },
-}
-
 export const LEVEL_ATTR_CONFIG = {
   power: 1,
   constitution: 1,
@@ -497,7 +481,6 @@ export const LEVEL_ATTR_CONFIG = {
   comprehension: 0.5,
   luck: 0.5
 }
-
 export const REALM_LEVEL_ATTR = {
   power: 2,
   constitution: 2,
@@ -505,7 +488,6 @@ export const REALM_LEVEL_ATTR = {
   comprehension: 1,
   luck: 1
 }
-
 export const BIG_REALM_BONUS = {
   1: {
     baseAttr: { power: 5, constitution: 5, agility: 5, comprehension: 3, luck: 3 },
@@ -548,7 +530,6 @@ export const BIG_REALM_BONUS = {
     multiplier: 2.2
   }
 }
-
 export const MONSTER_STRENGTH_CONFIG = {
   mapMultiplier: 1.15,
   realmMultiplier: 1.08,
@@ -566,7 +547,6 @@ export const MONSTER_STRENGTH_CONFIG = {
   },
   maxMultiplier: 15,
 }
-
 export const EQUIPMENT_SET_CONFIG = [
   {
     setId: 1,
@@ -628,7 +608,6 @@ export const EQUIPMENT_SET_CONFIG = [
     ]
   }
 ]
-
 export const ILLUSTRATION_CONFIG = {
   killStages: [
     { count: 10, name: "初遇", unlockDesc: "解锁怪物基础信息" },
@@ -642,7 +621,6 @@ export const ILLUSTRATION_CONFIG = {
     3: { allMulti: 1.02 },
   }
 }
-
 // 成就系统配置
 export const ACHIEVEMENT_CONFIG = [
   // 成长类成就
@@ -789,7 +767,6 @@ export const ACHIEVEMENT_CONFIG = [
     reward: { gold: 200000, strengthenStone: 100, upgradeStone: 100 },
   },
 ]
-
 // 每日签到+在线奖励
 export const SIGN_IN_CONFIG = {
   cycleDays: 7,
@@ -803,14 +780,12 @@ export const SIGN_IN_CONFIG = {
     { day: 7, reward: { gold: 15000, starStone: 3, resetPill: 1, superExpPill: 1 } },
   ]
 }
-
 export const ONLINE_REWARD_CONFIG = [
   { minute: 5, reward: { gold: 500, strengthenStone: 1 } },
   { minute: 15, reward: { gold: 1000, upgradeStone: 1, expPill: 1 } },
   { minute: 30, reward: { gold: 2000, strengthenStone: 3, upgradeStone: 2 } },
   { minute: 60, reward: { gold: 5000, starStone: 1, expPill: 3 } },
 ]
-
 // 丹药系统
 export const PILL_CONFIG = {
   expPill: {
@@ -856,7 +831,6 @@ export const PILL_CONFIG = {
     stackLimit: 99,
   },
 }
-
 export const SKILL_CONFIG = {
   passive: [
     { id: 1, name: '吸血心法', type: 'passive', desc: '攻击时恢复5%伤害的气血', lv1: 0.05, lvMax: 10, upgradeCost: { strengthenStone: 10 }, effect: 'lifesteal' },
@@ -870,28 +844,23 @@ export const SKILL_CONFIG = {
     { id: 3, name: '暴击诀', type: 'active', desc: '5秒内暴击率翻倍', cd: 12000, effect: 'critBoostActive', duration: 5000 },
   ]
 }
-
 export const SECT_CONFIG = [
   { id: 1, name: '青云剑派', type: 'attack', unlockRealm: 3, bonus: { attack: 0.2 }, skills: [1,3], tasks: [{ type: 'kill', target: 50, reward: { sectContrib: 20 } }] },
   { id: 2, name: '丹鼎门', type: 'pill', unlockRealm: 4, bonus: { pillRate: 0.3 }, skills: [2,4], tasks: [{ type: 'item', target: 10, reward: { sectContrib: 25 } }] },
   { id: 3, name: '金刚宗', type: 'defense', unlockRealm: 5, bonus: { defense: 0.25 }, skills: [2,3], tasks: [{ type: 'kill', target: 80, reward: { sectContrib: 30 } }] },
 ]
-
 export const SECT_TYPE_MAP = {
   attack: '攻击',
   pill: '丹药',
   defense: '防御'
 }
-
 export const SECT_RANK = ['外门弟子', '内门弟子', '核心弟子', '长老', '掌门']
-
 export const CAVE_CONFIG = {
   spiritArray: { lv1: 1.1, maxLv: 10, cost: { strengthenStone: 20 } },
   spiritField: { plants: [{ name: '灵草', time: 300000, reward: { expPill: 1 } }] },
   refineStove: { lv1: 1, maxLv: 10, cost: { upgradeStone: 25 } },
   pillStove: { lv1: 1, maxLv: 10, cost: { starStone: 30 } }
 }
-
 export const ROOT_CONFIG = [
   { grade: '凡根', rate: 1.0, attr: 1.0 },
   { grade: '灵根', rate: 1.3, attr: 1.2 },
@@ -901,7 +870,6 @@ export const ROOT_CONFIG = [
 export const MERIDIAN_CONFIG = {
   nodes: 20, nodeCost: { starStone: 15 }, totalBonus: { allAttr: 0.5 }
 }
-
 export const SECRET_CONFIG = {
   unlockKill: 100, rewardMulti: 3, events: [
     { name: '仙人赠礼', chance: 5, effect: 'gift' },
@@ -909,6 +877,262 @@ export const SECRET_CONFIG = {
     { name: '秘境入口', chance: 2, effect: 'secret' },
   ]
 }
-
 export const LEVEL_UP_ATTR = { power: 2, constitution: 2, agility: 1, comprehension: 1, luck: 1 }
 export const REALM_UP_ATTR = { power: 5, constitution: 5, agility: 3, comprehension: 3, luck: 2 }
+export const ASCEND_CONFIG = {
+  unlockRealmId: 9,
+  trialNeed: { killCount: 10000, gold: 1000000 },
+  maxOfflineHours: 6,
+  offlineMultiplier: 0.8,
+}
+export const IMMORTAL_REALM_CONFIG = [
+  { id: 1, name: '人仙', baseExp: 10000000, baseKillNeed: 20000, multiplier: 2.2 },
+  { id: 2, name: '地仙', baseExp: 50000000, baseKillNeed: 50000, multiplier: 2.5 },
+  { id: 3, name: '天仙', baseExp: 200000000, baseKillNeed: 100000, multiplier: 2.8 },
+  { id: 4, name: '金仙', baseExp: 1000000000, baseKillNeed: 300000, multiplier: 3.2 },
+  { id: 5, name: '大罗金仙', baseExp: 5000000000, baseKillNeed: 1000000, multiplier: 4.0 },
+]
+export const IMMORTAL_MAP_CONFIG = [
+  { id: 101, name: '南天门', unlockRealmId: 1, unlockLevel: 1, goldMultiplier: 10, expMultiplier: 10, specialTag: null, monsterAttackUp: 0.5 },
+  { id: 102, name: '瑶池', unlockRealmId: 2, unlockLevel: 1, goldMultiplier: 20, expMultiplier: 20, specialTag: 'elite_rate_up', monsterAttackUp: 0.8 },
+  { id: 103, name: '兜率宫', unlockRealmId: 3, unlockLevel: 1, goldMultiplier: 50, expMultiplier: 50, specialTag: 'rare_monster_up', monsterAttackUp: 1.2 },
+]
+export const IMMORTAL_MONSTER_CONFIG = [
+  { id: 101, monsterId: 101, name: '天兵', mapId: 101, baseHp: 100000, baseAttack: 2000, baseDefense: 500, baseGold: 1000, baseExp: 5000, isElite: false, isRare: false },
+  { id: 102, monsterId: 102, name: '天将', mapId: 101, baseHp: 300000, baseAttack: 5000, baseDefense: 1500, baseGold: 3000, baseExp: 15000, isElite: true, isRare: false },
+  { id: 103, monsterId: 103, name: '仙将', mapId: 102, baseHp: 1000000, baseAttack: 15000, baseDefense: 5000, baseGold: 10000, baseExp: 50000, isElite: false, isRare: false },
+]
+export const PET_CONFIG = {
+  1: { id: 1, name: '灵狐', type: 'attack', baseAtk: 10, baseHp: 50, baseDef: 2, skill: { name: '撕咬', desc: '对怪物造成120%攻击力伤害', dmgMulti: 1.2 }, qualityRange: [0.5, 1.5], unlockRealm: 2 },
+  2: { id: 2, name: '玄龟', type: 'defense', baseAtk: 5, baseHp: 200, baseDef: 10, skill: { name: '护盾', desc: '给玩家增加10%最大气血的护盾', effect: 'shield' }, qualityRange: [0.6, 1.6], unlockRealm: 3 },
+  3: { id: 3, name: '仙鹿', type: 'support', baseAtk: 3, baseHp: 100, baseDef: 5, skill: { name: '治愈', desc: '每5秒恢复玩家2%最大气血', effect: 'heal', interval: 5000 }, qualityRange: [0.7, 1.7], unlockRealm: 4 },
+  4: { id: 4, name: '青龙', type: 'attack', baseAtk: 50, baseHp: 500, baseDef: 20, skill: { name: '龙息', desc: '对怪物造成300%攻击力伤害', dmgMulti: 3 }, qualityRange: [1.2, 2.5], unlockRealm: 6 },
+}
+export const PET_EGG_CONFIG = {
+  normal: { name: '普通灵兽蛋', petIds: [1,2], chance: 100, dropRate: 1 },
+  rare: { name: '稀有灵兽蛋', petIds: [1,2,3], chance: 100, dropRate: 0.3 },
+  legendary: { name: '传说灵兽蛋', petIds: [3,4], chance: 100, dropRate: 0.05 },
+}
+export const SKY_TOWER_CONFIG = {
+  baseHpMulti: 200,
+  baseAtkMulti: 30,
+  baseDefMulti: 15,
+  levelMulti: 1.3,
+  bossInterval: 10,
+  debuffList: [
+    { id: 1, name: '虚弱', desc: '玩家攻击力降低30%', effect: { attackMulti: 0.7 } },
+    { id: 2, name: '迷雾', desc: '玩家闪避率降低50%', effect: { dodgeMulti: 0.5 } },
+    { id: 3, name: '禁暴', desc: '玩家无法暴击', effect: { critRate: 0 } },
+    { id: 4, name: '狂暴', desc: '怪物攻击力提升50%', effect: { monsterAtkMulti: 1.5 } },
+    { id: 5, name: '自愈', desc: '怪物每回合恢复5%气血', effect: { monsterHeal: 0.05 } },
+  ],
+  baseReward: { gold: 1000, strengthenStone: 5, arenaCoin: 10 },
+  bossReward: { petEgg: 'rare', freeAttributePoint: 1, arenaCoin: 100 },
+}
+export const ARENA_CONFIG = {
+  baseRank: 1000,
+  challengeTimes: 5,
+  resetHours: 24,
+  seasonDays: 30,
+  rankReward: {
+    1: { arenaCoin: 10000, petEgg: 'legendary' },
+    10: { arenaCoin: 5000, petEgg: 'rare' },
+    100: { arenaCoin: 1000, petEgg: 'normal' },
+    500: { arenaCoin: 500 },
+    1000: { arenaCoin: 200 },
+  },
+  dailyReward: { arenaCoin: 100 },
+  shopItems: [
+    { id: 1, name: '专属攻击装备', cost: 500, type: 'equipment', quality: 5 },
+    { id: 2, name: '传说灵兽蛋', cost: 2000, type: 'petEgg', eggType: 'legendary' },
+    { id: 3, name: '稀有灵兽蛋', cost: 500, type: 'petEgg', eggType: 'rare' },
+    { id: 4, name: '洗髓丹', cost: 100, type: 'pill', pillId: 'resetPill' },
+  ]
+}
+export const BATTLE_SPEED_CONFIG = [1, 2, 5, 10]
+export const ONE_KEY_CONFIG = {
+  decomposeQuality: [1, 2, 3],
+}
+
+// 背包系统
+// 物品类型
+export const ITEM_TYPE = {
+  EQUIP: 'equip',        // 装备
+  MATERIAL: 'material',  // 材料
+  PILL: 'pill',          // 丹药
+  PET_EGG: 'pet_egg',    // 灵兽蛋
+  FABAO: 'fabao',        // 法宝
+  TASK: 'task',          // 任务道具
+  OTHER: 'other'         // 其他
+}
+
+// 物品品质
+export const ITEM_QUALITY = {
+  1: { name: '普通', color: 'text-gray-400', borderColor: 'border-gray-400', bg: 'bg-gray-400/10' },
+  2: { name: '精良', color: 'text-green-500', borderColor: 'border-green-500', bg: 'bg-green-500/10' },
+  3: { name: '稀有', color: 'text-blue-500', borderColor: 'border-blue-500', bg: 'bg-blue-500/10' },
+  4: { name: '史诗', color: 'text-purple-500', borderColor: 'border-purple-500', bg: 'bg-purple-500/10' },
+  5: { name: '传说', color: 'text-orange-500', borderColor: 'border-orange-500', bg: 'bg-orange-500/10' },
+  6: { name: '逆天', color: 'text-red-500', borderColor: 'border-red-500', bg: 'bg-red-500/10' },
+}
+
+// 背包基础配置
+export const BACKPACK_CONFIG = {
+  initCapacity: 50,
+  maxCapacity: 200,
+  expandPerTime: 10,
+  expandCost: {
+    type: 'strengthenStone',
+    count: 50
+  },
+  defaultStackMax: 999,
+}
+
+// 物品配置表
+export const ITEM_CONFIG = {
+  // 材料类
+  strengthenStone: {
+    id: 'strengthenStone',
+    name: '强化石',
+    type: ITEM_TYPE.MATERIAL,
+    quality: 2,
+    stackMax: 999,
+    desc: '装备强化必备材料，可通过分解装备、打怪掉落获得',
+    canSell: true,
+    sellPrice: 10,
+    canUse: false
+  },
+  upgradeStone: {
+    id: 'upgradeStone',
+    name: '进阶石',
+    type: ITEM_TYPE.MATERIAL,
+    quality: 3,
+    stackMax: 999,
+    desc: '装备品质进阶必备材料，精英怪、BOSS掉落',
+    canSell: true,
+    sellPrice: 50,
+    canUse: false
+  },
+  starStone: {
+    id: 'starStone',
+    name: '升星石',
+    type: ITEM_TYPE.MATERIAL,
+    quality: 4,
+    stackMax: 999,
+    desc: '装备升星必备稀有材料，稀有怪、通天塔BOSS掉落',
+    canSell: true,
+    sellPrice: 200,
+    canUse: false
+  },
+  arenaCoin: {
+    id: 'arenaCoin',
+    name: '竞技场币',
+    type: ITEM_TYPE.MATERIAL,
+    quality: 3,
+    stackMax: 99999,
+    desc: '竞技场专属货币，可在竞技场商店兑换稀有道具',
+    canSell: false,
+    canUse: false
+  },
+
+  // 丹药类
+  expPill: {
+    id: 'expPill',
+    name: '修为丹',
+    type: ITEM_TYPE.PILL,
+    quality: 2,
+    stackMax: 9999,
+    desc: '使用后获得1000点修为，快速提升境界',
+    canSell: true,
+    sellPrice: 100,
+    canUse: true,
+    useEffect: { type: 'exp', value: 1000 }
+  },
+  superExpPill: {
+    id: 'superExpPill',
+    name: '超级修为丹',
+    type: ITEM_TYPE.PILL,
+    quality: 4,
+    stackMax: 9999,
+    desc: '使用后获得10000点修为，突破境界必备',
+    canSell: true,
+    sellPrice: 1000,
+    canUse: true,
+    useEffect: { type: 'exp', value: 10000 }
+  },
+  attackPill: {
+    id: 'attackPill',
+    name: '攻击丹',
+    type: ITEM_TYPE.PILL,
+    quality: 3,
+    stackMax: 9999,
+    desc: '使用后30分钟内攻击力提升20%，可叠加时长',
+    canSell: true,
+    sellPrice: 500,
+    canUse: true,
+    useEffect: { type: 'buff', buffId: 'attackPill', duration: 1800000 }
+  },
+  defensePill: {
+    id: 'defensePill',
+    name: '防御丹',
+    type: ITEM_TYPE.PILL,
+    quality: 3,
+    stackMax: 9999,
+    desc: '使用后30分钟内防御力提升20%，可叠加时长',
+    canSell: true,
+    sellPrice: 500,
+    canUse: true,
+    useEffect: { type: 'buff', buffId: 'defensePill', duration: 1800000 }
+  },
+  resetPill: {
+    id: 'resetPill',
+    name: '洗髓丹',
+    type: ITEM_TYPE.PILL,
+    quality: 5,
+    stackMax: 9999,
+    desc: '重置所有已分配的属性点，重新分配角色属性',
+    canSell: true,
+    sellPrice: 2000,
+    canUse: true,
+    useEffect: { type: 'special', effect: 'resetAttribute' }
+  },
+
+  // 灵兽蛋类
+  normalPetEgg: {
+    id: 'normalPetEgg',
+    name: '普通灵兽蛋',
+    type: ITEM_TYPE.PET_EGG,
+    quality: 2,
+    stackMax: 99,
+    desc: '可孵化出普通品质灵兽，有概率获得灵狐、玄龟',
+    canSell: true,
+    sellPrice: 1000,
+    canUse: true,
+    useEffect: { type: 'hatch', eggType: 'normal' }
+  },
+  rarePetEgg: {
+    id: 'rarePetEgg',
+    name: '稀有灵兽蛋',
+    type: ITEM_TYPE.PET_EGG,
+    quality: 4,
+    stackMax: 99,
+    desc: '可孵化出稀有品质灵兽，高概率获得仙鹿',
+    canSell: true,
+    sellPrice: 5000,
+    canUse: true,
+    useEffect: { type: 'hatch', eggType: 'rare' }
+  },
+  legendaryPetEgg: {
+    id: 'legendaryPetEgg',
+    name: '传说灵兽蛋',
+    type: ITEM_TYPE.PET_EGG,
+    quality: 5,
+    stackMax: 99,
+    desc: '可孵化出传说品质灵兽，高概率获得青龙',
+    canSell: true,
+    sellPrice: 20000,
+    canUse: true,
+    useEffect: { type: 'hatch', eggType: 'legendary' }
+  },
+}
+
