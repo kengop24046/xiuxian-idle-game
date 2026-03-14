@@ -1,5 +1,4 @@
 import { gameState } from './state.js'
-import { currentRealmExpNeed, currentRealmKillNeed } from './state.js'
 import { EQUIPMENT_CONFIG, REALM_CONFIG } from './config.js'
 
 export const formatNumber = (num) => {
@@ -30,114 +29,99 @@ export function generateUUID() {
 }
 
 export function generateEquipment(level, minQuality = 1, maxQuality = 5, multiplier = 1) {
-  level = Math.max(1, Number(level) || 1)
-  minQuality = Math.max(1, Math.min(Number(minQuality) || 1, EQUIPMENT_CONFIG.quality.length))
-  maxQuality = Math.max(minQuality, Math.min(Number(maxQuality) || 5, EQUIPMENT_CONFIG.quality.length))
+  level = Math.max(1, Number(level) || gameState.currentLevel || 1)
+  minQuality = Math.max(1, Math.min(Number(minQuality) || 1, 5))
+  maxQuality = Math.max(minQuality, Math.min(Number(maxQuality) || 5, 5))
   multiplier = Math.max(1, Number(multiplier) || 1)
-  const parts = EQUIPMENT_CONFIG.parts
+
+  const parts = [
+    { id: 'weapon', name: '武器', mainAttr: 'baseAttack' },
+    { id: 'helmet', name: '头盔', mainAttr: 'baseDefense' },
+    { id: 'armor', name: '铠甲', mainAttr: 'baseHp' },
+    { id: 'belt', name: '腰带', mainAttr: 'baseHp' },
+    { id: 'shoes', name: '鞋子', mainAttr: 'baseAgility' },
+    { id: 'necklace', name: '项链', mainAttr: 'baseCritRate' },
+    { id: 'ring', name: '戒指', mainAttr: 'baseAttack' },
+    { id: 'bracers', name: '护腕', mainAttr: 'baseDefense' }
+  ]
+
   const randomPart = parts[randomInt(0, parts.length - 1)]
-  const qualityWeights = {
-    1: 100,
-    2: 80,
-    3: 50,
-    4: 25,
-    5: 10,
-    6: 3
+  const qualityId = randomInt(minQuality, maxQuality)
+  const qualityConfig = {
+    1: { name: '普通', color: 'border-gray-400' },
+    2: { name: '精良', color: 'border-green-400' },
+    3: { name: '优质', color: 'border-blue-400' },
+    4: { name: '史诗', color: 'border-purple-400' },
+    5: { name: '传说', color: 'border-orange-400' }
   }
-  let totalWeight = 0
-  const validQualities = []
-  for (let q = minQuality; q <= maxQuality; q++) {
-    totalWeight += qualityWeights[q]
-    validQualities.push({ quality: q, weight: qualityWeights[q] })
+  const quality = qualityConfig[qualityId] || qualityConfig[1]
+
+  const levelBase = Math.pow(1.2, level - 1) * multiplier
+  const qualityBase = 1 + (qualityId - 1) * 0.3
+  const mainAttrValue = Math.max(10, Math.floor(10 * levelBase * qualityBase))
+
+  const baseAttr = {
+    baseAttack: 0,
+    baseHp: 0,
+    baseDefense: 0,
+    baseAgility: 0,
+    baseCritRate: 0,
+    basePower: 0,
+    baseConstitution: 0,
+    baseComprehension: 0,
+    baseLuck: 0,
+    baseCritDamage: 1,
+    baseExpRate: 1,
+    baseDropRate: 0
   }
-  let randomNum = randomInt(1, totalWeight)
-  let currentWeight = 0
-  let selectedQuality = minQuality
-  for (let q of validQualities) {
-    currentWeight += q.weight
-    if (randomNum <= currentWeight) {
-      selectedQuality = q.quality
-      break
+
+  if (randomPart.mainAttr === 'baseAttack') {
+    baseAttr.baseAttack = Math.max(1, mainAttrValue * 2)
+  } else if (randomPart.mainAttr === 'baseHp') {
+    baseAttr.baseHp = Math.max(100, mainAttrValue * 20)
+  } else if (randomPart.mainAttr === 'baseDefense') {
+    baseAttr.baseDefense = Math.max(1, mainAttrValue)
+  } else if (randomPart.mainAttr === 'baseAgility') {
+    baseAttr.baseAgility = Math.max(1, mainAttrValue)
+  } else if (randomPart.mainAttr === 'baseCritRate') {
+    baseAttr.baseCritRate = Math.max(0.01, mainAttrValue * 0.005)
+  }
+
+  const subAttrCount = qualityId >= 5 ? 4 : qualityId >= 3 ? 3 : 2
+  const subAttrKeys = ['basePower', 'baseConstitution', 'baseAgility', 'baseComprehension', 'baseLuck']
+  const addedSubAttrs = new Set()
+
+  let addedCount = 0
+  while (addedCount < subAttrCount && addedSubAttrs.size < subAttrKeys.length) {
+    const randomKey = subAttrKeys[randomInt(0, subAttrKeys.length - 1)]
+    if (!addedSubAttrs.has(randomKey)) {
+      const addValue = Math.max(1, Math.floor(mainAttrValue * 0.3 * randomInt(8, 12) / 10))
+      baseAttr[randomKey] += addValue
+      addedSubAttrs.add(randomKey)
+      addedCount++
     }
   }
-  const qualityInfo = EQUIPMENT_CONFIG.quality[selectedQuality - 1]
-  const baseAttrMulti = level * multiplier * qualityInfo.baseMultiplier
-  const basePower = Math.floor(randomInt(1, 3) * baseAttrMulti)
-  const baseConstitution = Math.floor(randomInt(1, 3) * baseAttrMulti)
-  const baseAgility = Math.floor(randomInt(1, 3) * baseAttrMulti)
-  const baseComprehension = Math.floor(randomInt(0, 2) * baseAttrMulti)
-  const baseLuck = Math.floor(randomInt(0, 2) * baseAttrMulti)
-  let baseAttack = 0
-  let baseHp = 0
-  let baseDefense = 0
-  if (randomPart.id === 'weapon') {
-    baseAttack = Math.floor(randomInt(3, 6) * baseAttrMulti)
-  } else if (['armor', 'helmet', 'shoes', 'belt', 'bracers'].includes(randomPart.id)) {
-    baseHp = Math.floor(randomInt(10, 20) * baseAttrMulti)
-    baseDefense = Math.floor(randomInt(2, 4) * baseAttrMulti)
-  } else {
-    baseAttack = Math.floor(randomInt(1, 3) * baseAttrMulti)
-    baseHp = Math.floor(randomInt(5, 10) * baseAttrMulti)
-    baseDefense = Math.floor(randomInt(1, 2) * baseAttrMulti)
-  }
-  const prefixList = ['破损的', '普通的', '精良的', '优质的', '史诗的', '传说的', '逆天的']
-  const prefix = prefixList[Math.min(selectedQuality, prefixList.length - 1)]
+
+  const prefixList = ['破损的', '普通的', '精良的', '优质的', '史诗的', '传说的', '神话的']
+  const prefix = prefixList[Math.min(qualityId - 1, prefixList.length - 1)]
   const equipName = `${prefix}${randomPart.name}`
-  return {
-    id: Date.now() + '-' + randomInt(1000, 9999),
+
+  const equipment = {
+    id: generateUUID(),
     name: equipName,
     partId: randomPart.id,
     partName: randomPart.name,
-    qualityId: selectedQuality,
-    qualityName: qualityInfo.name,
-    qualityColor: qualityInfo.color,
+    qualityId: qualityId,
+    qualityName: quality.name,
+    qualityColor: quality.color,
     level: level,
     strengthenLevel: 0,
     star: 1,
     setId: null,
-    setName: '',
-    baseAttack: baseAttack,
-    baseHp: baseHp,
-    baseDefense: baseDefense,
-    power: basePower,
-    constitution: baseConstitution,
-    agility: baseAgility,
-    comprehension: baseComprehension,
-    luck: baseLuck
-  }
-}
-
-export function exportSave(gameState) {
-  const saveData = JSON.parse(JSON.stringify({
-    ...gameState,
-    continuousAttackTimerId: null,
-    isContinuousAttacking: false
-  }))
-
-  const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `xiuxian-save-${new Date().toLocaleDateString()}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  return true
-}
-
-export async function importSave(file, gameState) {
-  if (!file.name.endsWith('.json')) {
-    throw new Error('请选择JSON格式的存档文件')
+    setName: null,
+    generateTime: Date.now(),
+    ...baseAttr
   }
 
-  const text = await file.text()
-  const parsedData = JSON.parse(text)
-
-  if (!parsedData.currentRealmId || parsedData.gold === undefined) {
-    throw new Error('无效的存档文件，缺少核心数据')
-  }
-
-  Object.assign(gameState, parsedData)
-  return true
+  return equipment
 }

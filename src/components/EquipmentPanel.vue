@@ -3,7 +3,6 @@
     <div v-if="tip.show" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg" :class="tip.type === 'success' ? 'bg-success text-white' : 'bg-danger text-white'">
       {{ tip.msg }}
     </div>
-
     <div class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">穿戴装备</h2>
       <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
@@ -32,7 +31,6 @@
         </div>
       </div>
     </div>
-
     <div v-if="selectedEquipment" class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">装备详情</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -64,17 +62,22 @@
                 :key="key"
                 class="flex justify-between items-center"
               >
-                <span class="text-light/70 text-sm">{{ attrNameMap[key] }}</span>
+                <span class="text-light/70 text-sm">{{ attrNameMap[key] || key }}</span>
                 <div class="flex items-center gap-2">
-                  <span class="text-primary font-semibold">+{{ formatNumber(value) }}</span>
+                  <span class="text-primary font-semibold">
+                    {{ formatAttrValue(key, value) }}
+                  </span>
                   <span
-                    v-if="!isCurrentEquipped"
+                    v-if="!isCurrentEquipped && attrDifference[key] !== undefined"
                     class="text-xs font-bold"
                     :class="attrDifference[key] >= 0 ? 'text-green-400' : 'text-red-400'"
                   >
-                    {{ attrDifference[key] >= 0 ? '+' : '' }}{{ formatNumber(attrDifference[key]) }}
+                    {{ attrDifference[key] >= 0 ? '+' : '' }}{{ formatAttrValue(key, attrDifference[key]) }}
                   </span>
                 </div>
+              </div>
+              <div v-if="Object.keys(equipmentFinalAttr).length === 0" class="text-center text-light/60 text-xs">
+                该装备暂无附加属性
               </div>
             </div>
           </div>
@@ -157,7 +160,6 @@
         </div>
       </div>
     </div>
-
     <div class="card">
       <h2 class="text-primary text-xl font-bold mb-4 text-center">背包装备</h2>
       <div v-if="bagEquipments.length === 0" class="text-center py-8 text-light/60">
@@ -186,7 +188,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed } from 'vue'
 import { wearEquipment, unwearEquipment, decomposeEquipment, strengthenEquipment, upgradeEquipment, starUpEquipment, calculateEquipmentAttr } from '@/game/equipment.js'
@@ -195,13 +196,22 @@ import { EQUIPMENT_CONFIG } from '@/game/config.js'
 import { formatNumber } from '@/game/utils.js'
 
 const attrNameMap = {
-  attack: '攻击力', hp: '气血上限', defense: '防御力', power: '力量',
-  constitution: '体质', agility: '身法', comprehension: '悟性', luck: '福缘',
+  attack: '攻击力', 
+  hp: '气血上限', 
+  defense: '防御力', 
+  power: '力量',
+  constitution: '体质', 
+  agility: '身法', 
+  comprehension: '悟性', 
+  luck: '福缘',
+  critRate: '暴击率',
+  critDamage: '暴击伤害',
+  expRate: '经验倍率',
+  dropRate: '掉落率'
 }
 
 const tip = ref({ show: false, msg: '', type: '' })
 const selectedEquipment = ref(null)
-
 const equippedEquipments = computed(() => gameState.equippedEquipments)
 const bagEquipments = computed(() => gameState.bagEquipments)
 const strengthenStone = computed(() => Number(gameState.items.strengthenStone) || 0)
@@ -233,13 +243,24 @@ const attrDifference = computed(() => {
   const diff = {}
   const selectAttr = equipmentFinalAttr.value
   const equipAttr = equippedCompareAttr.value
-  Object.keys(attrNameMap).forEach(key => {
+  Object.keys(selectAttr).forEach(key => {
     const selectValue = selectAttr[key] || 0
     const equipValue = equipAttr[key] || 0
     diff[key] = selectValue - equipValue
   })
   return diff
 })
+
+const formatAttrValue = (key, value) => {
+  if (value === undefined || value === null) return '0'
+  if (['critRate', 'dropRate'].includes(key)) {
+    return `${(value * 100).toFixed(1)}%`
+  }
+  if (['critDamage', 'expRate'].includes(key)) {
+    return `x${value.toFixed(2)}`
+  }
+  return formatNumber(Math.floor(value))
+}
 
 const compareTipText = computed(() => {
   if (!currentEquippedCompare.value) return '【该部位暂无穿戴装备】'

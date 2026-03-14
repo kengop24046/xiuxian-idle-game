@@ -73,11 +73,10 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed } from 'vue'
 import { saveGame, resetGame, gameState, currentRealm } from '@/game/state.js'
-import { exportSave, importSave, formatNumber } from '@/game/utils.js'
+import { formatNumber } from '@/game/utils.js'
 
 const tip = ref({ show: false, msg: '', type: '' })
 const importInput = ref(null)
@@ -94,41 +93,64 @@ const showTip = (success, msg) => {
 
 const handleManualSave = () => {
   const result = saveGame()
-  result ? showTip(true, '存档保存成功') : showTip(false, '存档保存失败')
+  result ? showTip(true, '存档保存成功') : showTip(false, '存档保存失败，请稍后重试')
 }
 
 const handleExportSave = () => {
   try {
-    exportSave(gameState)
-    showTip(true, '存档导出成功，已下载为 JSON 文件')
-  } catch (err) {
-    showTip(false, `导出失败：${err.message}`)
+    const saveData = JSON.stringify(gameState, null, 2)
+    const blob = new Blob([saveData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const fileName = `修仙挂机录_存档_${new Date().toLocaleString().replace(/[/:\s]/g, '-')}.json`
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    showTip(true, '存档导出成功！')
+  } catch (error) {
+    console.error('导出存档失败：', error)
+    showTip(false, '存档导出失败，请稍后重试')
   }
 }
 
-const handleImportSave = async (e) => {
+const handleImportSave = (e) => {
   const file = e.target.files[0]
   if (!file) return
 
-  if (!confirm('导入存档将覆盖当前游戏进度，是否继续？')) {
-    e.target.value = ''
+  if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+    showTip(false, '请选择正确的JSON格式存档文件')
+    importInput.value.value = ''
     return
   }
 
-  try {
-    await importSave(file, gameState)
-    showTip(true, '存档导入成功，游戏将刷新')
-    setTimeout(() => window.location.reload(), 1000)
-  } catch (err) {
-    showTip(false, `导入失败：${err.message}`)
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    try {
+      const parsedData = JSON.parse(event.target.result)
+      if (!parsedData.currentRealmId || parsedData.gold === undefined) {
+        throw new Error('存档文件无效，缺少核心数据')
+      }
+
+      Object.assign(gameState, parsedData)
+      saveGame()
+      showTip(true, '存档导入成功！游戏进度已更新')
+      importInput.value.value = ''
+    } catch (error) {
+      console.error('导入存档失败：', error)
+      showTip(false, '存档解析失败，文件可能已损坏或格式错误')
+      importInput.value.value = ''
+    }
   }
-  e.target.value = ''
+  reader.readAsText(file)
 }
 
 const handleResetGame = () => {
-  if (!confirm('确定要重置游戏吗？所有进度将被清除，无法恢复！')) return
-  resetGame()
-  showTip(true, '游戏已重置，即将刷新页面')
-  setTimeout(() => window.location.reload(), 1000)
+  if (confirm('确定要重置游戏吗？所有进度将彻底清除，无法恢复！')) {
+    resetGame()
+    showTip(true, '游戏已重置，重新开始冒险吧！')
+  }
 }
 </script>

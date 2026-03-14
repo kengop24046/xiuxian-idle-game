@@ -12,7 +12,7 @@ import {
   BATTLE_SPEED_CONFIG, IMMORTAL_MAP_CONFIG, IMMORTAL_MONSTER_CONFIG,
   REALM_CONFIG, ITEM_TYPE
 } from './config.js'
-import { randomInt, randomChance, generateEquipment } from './utils.js'
+import { randomInt, randomChance, generateEquipment, generateUUID } from './utils.js'
 
 export function generateMonster() {
   const mid = gameState.currentMapId
@@ -186,6 +186,7 @@ export function attackMonster() {
     newMonster: null,
     heartDevilTest: gameState.heartDevilTest || false
   }
+  
   if (m.currentHp <= 0) {
     res.monsterDead = true
     gameState.totalKillCount++
@@ -207,6 +208,7 @@ export function attackMonster() {
     const reach = gameState.realmKillCount >= currentRealmKillNeed.value
     res.reachKillNeed = reach
     if (reach) gameState.autoBattle = false
+    
     const drop = {
       gold: m.gold,
       exp: m.exp,
@@ -221,10 +223,12 @@ export function attackMonster() {
     if (gameState.currentExp > currentRealmExpNeed.value) {
       gameState.currentExp = currentRealmExpNeed.value
     }
+    
     const itemType = ['strengthenStone', 'upgradeStone', 'starStone'][randomInt(0, 2)]
     const itemCount = randomInt(1, 3)
     addItem(itemType, itemCount)
     drop.items.push({ type: itemType, count: itemCount })
+    
     if (randomChance(15)) {
       const pillList = ['expPill', 'attackPill', 'defensePill']
       const pillId = pillList[randomInt(0, pillList.length - 1)]
@@ -236,14 +240,16 @@ export function attackMonster() {
       addItem('superExpPill', 1)
       drop.pills.push({ id: 'superExpPill', count: 1 })
     }
-    const equipDropRate = m.isRare ? 40 : m.isElite ? 20 : 5
+    
+    const equipDropRate = m.isRare ? 40 : m.isElite ? 20 : 10
     const equipLevel = Math.max(1, Math.floor(Number(m.maxHp) / 25) || 1)
     let minQuality = 1
     let maxQuality = 3
     if (m.isElite) { minQuality = 2; maxQuality = 5 }
     if (m.isRare) { minQuality = 3; maxQuality = 6 }
+    
     if (randomChance(equipDropRate)) {
-      let equipment = generateEquipment(equipLevel, minQuality, maxQuality, m.isRare ? 2 : 1.2)
+      const equipment = generateEquipment(equipLevel, minQuality, maxQuality, m.isRare ? 2 : 1.2)
       
       if (randomChance(m.isRare ? 40 : m.isElite ? 20 : 5)) {
         const availableSets = EQUIPMENT_SET_CONFIG.filter(set => 
@@ -257,21 +263,24 @@ export function attackMonster() {
           }
         }
       }
-      const uniqueEquipId = `equip_${Date.now()}_${randomInt(1000, 9999)}`
-      const equipAddData = {
-        equipData: equipment,
+      
+      const uniqueEquipId = `equip_${generateUUID()}`
+      const addSuccess = addItem(uniqueEquipId, 1, {
         itemType: ITEM_TYPE.EQUIP,
+        equipData: equipment,
         quality: equipment.qualityId || 1
-      }
-      const addSuccess = addItem(uniqueEquipId, 1, equipAddData)
+      })
+      
       if (addSuccess) {
         drop.equipment = equipment
       } else {
         console.warn('装备添加失败，背包已满或配置异常', equipment)
       }
     }
+    
     res.drop = drop
     gameState.heartDevilTest = false
+    
     let newMonster = null
     let retryCount = 0
     while (!newMonster && retryCount < 5) {
@@ -297,6 +306,7 @@ export function attackMonster() {
     stopContinuousAttack()
     return res
   }
+  
   const isDodge = randomChance(p.dodgeRate)
   res.playerDodged = isDodge
   if (gameState.shield > 0) {
@@ -316,9 +326,11 @@ export function attackMonster() {
       stopContinuousAttack()
     }
   }
+  
   if (gameState.skyTowerDebuff?.effect?.monsterHeal) {
     m.currentHp = Math.min(m.currentHp + Math.floor(m.maxHp * gameState.skyTowerDebuff.effect.monsterHeal), m.maxHp)
   }
+  
   saveGame()
   return res
 }
@@ -382,7 +394,7 @@ const handleTrialReward = (monster) => {
   if (isBoss) {
     const equipLevel = Math.max(1, layer * 2)
     let equipment = generateEquipment(equipLevel, 3, 6, 2)
-    const uniqueEquipId = `trial_equip_${Date.now()}_${randomInt(1000, 9999)}`
+    const uniqueEquipId = `trial_equip_${generateUUID()}`
     const equipAddData = {
       equipData: equipment,
       itemType: ITEM_TYPE.EQUIP,
